@@ -1,14 +1,16 @@
 # EDMS — Energy Data Management System
 
-> **Repository status: private.**
-> This repository is currently **private** during active development.
-> Publication under an open-source license is planned as part of this
-> project's public-funding obligations (BAFA). Timing and exact scope of the
-> public release are governed by a dedicated compliance gate (`compliance-director`
-> sign-off, "Public-Go") and are **not yet decided** — see
-> `docs/adr/ADR-0001-projekt-skelett.md`, sections 6.1 (compliance conditions)
-> and 7.2 (open question F5). Nothing in this README should be read as an
-> announcement of an actual publication date.
+> **Source availability.**
+> The source code of this project is published under the Apache License 2.0
+> (see `LICENSE` and `NOTICE`) as part of the open-source obligations attached
+> to its public funding (BAFA "Pilotprogramm Einsparzähler").
+>
+> The public repository holds a **snapshot of the source code**, not a mirror
+> of the development history. Internal artefacts are deliberately not part of
+> it: the data-protection and ISO 27001 compliance records, the development
+> governance, and the operational planning. Development continues in a
+> separate private repository, and the gapless history kept there — not this
+> snapshot — is the record of own development towards the funding body.
 
 ## A. Purpose of the software
 

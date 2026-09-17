@@ -38,6 +38,21 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
+      # `@edms/migrate` ist ein Workspace-Paket, dessen TYPDEKLARATIONEN das
+      # Backend importiert (Test-Support, Integrationstests). Sie entstehen
+      # erst beim Build — `dist/` ist gitignoriert und liegt nicht im
+      # Repository. Ohne diesen Schritt scheitert der Job mit
+      # "Cannot find module '@edms/migrate'", und zwar unabhaengig davon, ob
+      # der Quelltext in Ordnung ist.
+      #
+      # Aufgefallen bei der Erstveroeffentlichung am 2026-09-17: Im frischen
+      # oeffentlichen Repository liefen Lint, Typecheck und beide Test-Jobs
+      # rot, waehrend derselbe Baum lokal gruen war — lokal war nur immer
+      # schon einmal gebaut worden. Der Defekt steckte die ganze Zeit in
+      # dieser Datei; sichtbar wurde er erst in einer Umgebung ohne
+      # Vorgeschichte.
+      - name: Workspace-Paket @edms/migrate bauen (Typdeklarationen)
+        run: pnpm --filter @edms/migrate run build
       - name: pnpm run lint
         run: pnpm run lint
 
@@ -53,6 +68,21 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
+      # `@edms/migrate` ist ein Workspace-Paket, dessen TYPDEKLARATIONEN das
+      # Backend importiert (Test-Support, Integrationstests). Sie entstehen
+      # erst beim Build — `dist/` ist gitignoriert und liegt nicht im
+      # Repository. Ohne diesen Schritt scheitert der Job mit
+      # "Cannot find module '@edms/migrate'", und zwar unabhaengig davon, ob
+      # der Quelltext in Ordnung ist.
+      #
+      # Aufgefallen bei der Erstveroeffentlichung am 2026-09-17: Im frischen
+      # oeffentlichen Repository liefen Lint, Typecheck und beide Test-Jobs
+      # rot, waehrend derselbe Baum lokal gruen war — lokal war nur immer
+      # schon einmal gebaut worden. Der Defekt steckte die ganze Zeit in
+      # dieser Datei; sichtbar wurde er erst in einer Umgebung ohne
+      # Vorgeschichte.
+      - name: Workspace-Paket @edms/migrate bauen (Typdeklarationen)
+        run: pnpm --filter @edms/migrate run build
       - name: pnpm run typecheck
         run: pnpm run typecheck
 
@@ -68,6 +98,21 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
+      # `@edms/migrate` ist ein Workspace-Paket, dessen TYPDEKLARATIONEN das
+      # Backend importiert (Test-Support, Integrationstests). Sie entstehen
+      # erst beim Build — `dist/` ist gitignoriert und liegt nicht im
+      # Repository. Ohne diesen Schritt scheitert der Job mit
+      # "Cannot find module '@edms/migrate'", und zwar unabhaengig davon, ob
+      # der Quelltext in Ordnung ist.
+      #
+      # Aufgefallen bei der Erstveroeffentlichung am 2026-09-17: Im frischen
+      # oeffentlichen Repository liefen Lint, Typecheck und beide Test-Jobs
+      # rot, waehrend derselbe Baum lokal gruen war — lokal war nur immer
+      # schon einmal gebaut worden. Der Defekt steckte die ganze Zeit in
+      # dieser Datei; sichtbar wurde er erst in einer Umgebung ohne
+      # Vorgeschichte.
+      - name: Workspace-Paket @edms/migrate bauen (Typdeklarationen)
+        run: pnpm --filter @edms/migrate run build
       - name: pnpm run test
         run: pnpm run test
 
@@ -246,6 +291,21 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
+      # `@edms/migrate` ist ein Workspace-Paket, dessen TYPDEKLARATIONEN das
+      # Backend importiert (Test-Support, Integrationstests). Sie entstehen
+      # erst beim Build — `dist/` ist gitignoriert und liegt nicht im
+      # Repository. Ohne diesen Schritt scheitert der Job mit
+      # "Cannot find module '@edms/migrate'", und zwar unabhaengig davon, ob
+      # der Quelltext in Ordnung ist.
+      #
+      # Aufgefallen bei der Erstveroeffentlichung am 2026-09-17: Im frischen
+      # oeffentlichen Repository liefen Lint, Typecheck und beide Test-Jobs
+      # rot, waehrend derselbe Baum lokal gruen war — lokal war nur immer
+      # schon einmal gebaut worden. Der Defekt steckte die ganze Zeit in
+      # dieser Datei; sichtbar wurde er erst in einer Umgebung ohne
+      # Vorgeschichte.
+      - name: Workspace-Paket @edms/migrate bauen (Typdeklarationen)
+        run: pnpm --filter @edms/migrate run build
       - name: pnpm -r --if-present run test:integration
         # Testcontainers verwaltet PG16+TimescaleDB-oss selbst über den
         # Docker-Socket des Runners (ADR §10.5) -- keine services:-Blöcke
