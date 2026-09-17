@@ -1,0 +1,473 @@
+# EDMS Auth API — OpenAPI-Contract (ADR-0002 Teil B, Phase 2, Status: proposed)
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1
+#   - info.title, info.version (SemVer), servers[].url gesetzt
+#   - Security-Scheme oauth2 als Default (global); die BFF-Session-Steuer-
+#     Endpunkte (/auth/login|callback|refresh|logout) sind KEINE Bearer-
+#     geschützten Ressourcen, sondern der OIDC-/Cookie-Sitzungspfad selbst —
+#     sie sind daher pro Operation als `security: []` markiert und über
+#     httpOnly-Cookie + SameSite=Strict + serverseitigen Origin-Allowlist-Check
+#     (CSRF, D2) geschützt. `GET /auth/session` ist Bearer-geschützt (Default).
+#   - CSRF/CORS (security-lead-Votum 3, F3): Der `Origin`-Check ist ein reiner
+#     SERVERSEITIGER Abgleich gegen eine Allowlist — der `Origin`-Header ist ein
+#     vom Browser gesetzter Forbidden-Header und wird DESHALB NICHT als
+#     OpenAPI-Parameter modelliert (Widerspruch "required vs. fehlt→403"
+#     aufgelöst). Voraussetzung: CORS für /auth/refresh und /auth/logout spiegelt
+#     NIE den Origin mit `Allow-Credentials` zurück (keine Origin-Reflexion).
+#     KEIN Double-Submit-Token (SameSite=Strict + Origin-Allowlist genügen).
+#   - Fehler-Shape: application/problem+json nach RFC 9457
+#   - keine generischen object-Responses ohne properties; Request-DTOs mit
+#     additionalProperties:false
+#
+# BEWUSSTE, dokumentierte Nicht-Anwendbarkeit einzelner Rule-Punkte (analog
+# health.openapi.yaml):
+#   - Cursor-Pagination: keine Listen-Ressource in diesem Contract → n/a.
+#   - `Idempotency-Key`-Header (Rule: "alle schreibenden Operationen"): die
+#     Auth-Operationen sind OIDC-/Sitzungs-STEUERUNG (kein Ressourcen-CRUD).
+#     /auth/refresh rotiert bewusst den Refresh-Token (Keycloak Refresh-Token-
+#     Rotation) und ist per Definition NICHT idempotent; /auth/logout IST
+#     idempotent (mehrfacher Aufruf → weiterhin 204). Ein Idempotency-Key
+#     hätte hier keine sinnvolle Semantik und wird bewusst weggelassen.
+#
+# DSGVO-Markierung (Teil-2-Design-Aufgabe 8):
+#   - Refresh-Token im httpOnly-Cookie = AUTHENTIFIZIERUNGSGEHEIMNIS
+#     (ISO/IEC 27001 A.5.17). Niemals im Response-Body, niemals im Log
+#     (pino-redact-Whitelist, rote Linie 2). httpOnly → kein JS-Zugriff (M3).
+#   - AccessTokenResponse.accessToken = kurzlebiges (5 min, A4) JWT, NUR im
+#     SPA-Memory (frontend-react.md, M3), nie in localStorage/sessionStorage.
+#   - SessionInfo.sub/roles = personenbeziehbar pseudonym (ErwGr. 26),
+#     pii=false; zweckbindung Sicherheit/Zugriffskontrolle (Art. 32/88 DSGVO,
+#     § 26 BDSG), NICHT Leistungs-/Verhaltenskontrolle. KEINE Klartext-PII in
+#     diesem Contract.
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Auth API (BFF)
+  version: 0.2.0
+  summary: >
+    Backend-for-Frontend-Sitzungssteuerung gegen Keycloak (OIDC
+    Authorization-Code-Flow + PKCE). Hybrid-Token-Modell (ADR-0002 A5):
+    Access-Token nur im SPA-Memory, Refresh-Token nur im httpOnly-Cookie.
+  description: >
+    Vertraulicher OIDC-Client im NestJS-Backend (BFF). Das Frontend spricht
+    NIE direkt mit Keycloak — der Code-Exchange läuft serverseitig mit dem
+    vertraulichen Client-Secret (aus Env/Vault, nie im Realm-Export, rote
+    Linie 4). Session-TTLs (ADR-0002 A4): Access 5 min, Idle 30 min, absolute
+    Session 8 h — durchgesetzt in Keycloak, vom BFF als 401 durchgereicht.
+    Status: proposed (Phase-2-Entwurf, Review durch backend-lead + security-lead).
+
+    **0.2.0 (additiv, Minor):** `SessionInfo.roles`-Enum um `geraete-support`
+    ergänzt (ADR-0005 §26.4 SEC-5 — eigene, eng geschnittene Rolle für die
+    break-glass-gehärtete Reverse-Auflösung `read:geraet_zuordnung`,
+    `stammdaten.openapi.yaml` 0.5.0). Keine bestehende Route/Schema geändert;
+    die Keycloak-Realm-Rolle selbst ist noch nicht angelegt (kein
+    Deployment-Change in diesem Paket, s. Code-Kommentar `app-role.ts`).
+  contact:
+    name: EDMS Studio
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Dev-Umgebung (Docker Compose, NestJS-Backend/BFF)
+
+tags:
+  - name: auth
+    description: OIDC-Sitzungssteuerung (Login/Callback/Refresh/Logout/Session).
+
+# Default-Security für ALLE Operationen: oauth2 (OIDC via Keycloak, ADR-0002).
+# Die Sitzungssteuer-Endpunkte überschreiben dies pro Operation mit
+# `security: []` (sie ETABLIEREN die Sitzung bzw. laufen über den
+# Refresh-Cookie, nicht über einen Bearer-Token).
+security:
+  - oauth2: []
+
+paths:
+  /auth/login:
+    get:
+      operationId: authLogin
+      tags: [auth]
+      summary: OIDC-Login starten (öffentlich, 302 zu Keycloak)
+      description: >
+        Startet den Authorization-Code-Flow mit PKCE (S256, IdP-seitig auf
+        `edms-bff` ERZWUNGEN). Das Backend erzeugt `state`, `nonce`,
+        `code_verifier`/`code_challenge`, legt sie in einem kurzlebigen,
+        verschlüsselten, httpOnly, Secure, SameSite=Lax-Vor-Auth-Cookie
+        (`__Host-edms_auth_tx`) ab (SameSite=Lax ist nötig, weil der Rücksprung
+        von Keycloak eine Top-Level-Navigation ist) und antwortet mit 302 zur
+        Keycloak-Authorization-URL. FESTER SPA-Einstiegspunkt: v1 kennt bewusst
+        KEINEN `redirect_uri`-Parameter (Open-Redirect-Fläche vermieden,
+        STRIDE-3). Ein konfigurierbares Ziel kommt später NUR mit exakter
+        Pfad-Allowlist.
+      security: []
+      responses:
+        '302':
+          description: Weiterleitung zur Keycloak-Authorization-URL.
+          headers:
+            Location:
+              description: Keycloak-Authorization-Endpoint inkl. PKCE-Parametern.
+              schema:
+                type: string
+                format: uri
+            Set-Cookie:
+              description: >
+                `__Host-edms_auth_tx` (httpOnly, Secure, SameSite=Lax,
+                Path=/, kurze TTL) — verschlüsselter PKCE-/state-/nonce-Kontext.
+                AUTHENTIFIZIERUNGS-Transienten, kein Log (rote Linie 2).
+              schema:
+                type: string
+        '503':
+          description: Identity-Provider (Keycloak) nicht erreichbar.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/callback:
+    get:
+      operationId: authCallback
+      tags: [auth]
+      summary: OIDC-Callback (öffentlich, Code-Exchange serverseitig, 302 zur SPA)
+      description: >
+        Rücksprungziel von Keycloak. Validiert `state` gegen den
+        Vor-Auth-Cookie, tauscht `code` + `code_verifier` serverseitig am
+        Keycloak-Token-Endpoint (vertraulicher Client), validiert das ID-Token
+        (u. a. `nonce`), setzt das Refresh-Token als httpOnly+Secure+
+        SameSite=Strict-Cookie (`__Host-edms_rt`) und leitet mit 302 in die
+        SPA. Der Access-Token wird NICHT in die Redirect-URL geschrieben
+        (History-/Referer-Leak-Schutz); die SPA holt ihn direkt danach über
+        `POST /auth/refresh`. Pflicht-Audit-Event `auth.anmeldung.erfolg` wird
+        erst NACH vollständiger Token-Validierung emittiert (rote Linie 1).
+      security: []
+      parameters:
+        # `code` ist bewusst NICHT required: ein Keycloak-Fehler-Rücksprung
+        # (z. B. abgebrochene MFA) sendet error=...&state=... OHNE code; der
+        # BFF unterscheidet 401 (OIDC-Fehler) von 400 (state fehlt) selbst.
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 4096
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 512
+        - name: error
+          in: query
+          required: false
+          description: OIDC-Fehlercode von Keycloak (z. B. abgebrochene MFA).
+          schema:
+            type: string
+            maxLength: 256
+        - name: error_description
+          in: query
+          required: false
+          description: Menschenlesbare OIDC-Fehlerbeschreibung von Keycloak.
+          schema:
+            type: string
+            maxLength: 1024
+        # Von Keycloak/OIDC zusätzlich gesendet (Live-Run 2026-07-13): ohne
+        # diese würde die globale ValidationPipe (forbidNonWhitelisted) mit 400
+        # ablehnen.
+        - name: session_state
+          in: query
+          required: false
+          description: Keycloak-Session-Referenz (informativ).
+          schema:
+            type: string
+            maxLength: 512
+        - name: iss
+          in: query
+          required: false
+          description: >-
+            Issuer-Identifier nach RFC 9207 (Mixup-Schutz). TODO(security-lead):
+            im BFF aktiv gegen KEYCLOAK_ISSUER_URL prüfen, derzeit nur akzeptiert.
+          schema:
+            type: string
+            maxLength: 512
+      responses:
+        '302':
+          description: Login erfolgreich; Refresh-Cookie gesetzt, Weiterleitung in die SPA.
+          headers:
+            Location:
+              description: Allowlist-geprüftes SPA-Ziel.
+              schema:
+                type: string
+                format: uri-reference
+            Set-Cookie:
+              description: >
+                `__Host-edms_rt` (httpOnly, Secure, SameSite=Strict, Path=/,
+                Max-Age = absolute Session 8 h). Refresh-Token =
+                Authentifizierungsgeheimnis (A.5.17). Zusätzlich wird der
+                Vor-Auth-Cookie gelöscht.
+              schema:
+                type: string
+        '400':
+          description: >
+            Ungültiger/fehlender `state`, `nonce`-Mismatch oder fehlgeschlagener
+            Code-Exchange. PII-frei; kein roher IdP-Fehlertext.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: OIDC-Fehler von Keycloak (z. B. Login/MFA abgebrochen).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/refresh:
+    post:
+      operationId: authRefresh
+      tags: [auth]
+      summary: Access-Token erneuern (Refresh-Cookie; CSRF-geschützt)
+      description: >
+        Liest das Refresh-Token aus dem httpOnly-Cookie `__Host-edms_rt`, ruft
+        den Keycloak-Token-Endpoint (`grant_type=refresh_token`) auf, ROTIERT
+        das Refresh-Token (setzt neues `__Host-edms_rt`) und liefert einen
+        frischen Access-Token im Body (NUR SPA-Memory, M3). Keycloak setzt
+        Idle-Timeout (30 min) und absolute Session (8 h) durch; abgelaufen →
+        401, die SPA leitet dann zu `/auth/login`. CSRF-Schutz (D2, entschieden):
+        SameSite=Strict + serverseitiger Origin-Allowlist-Check (KEIN
+        Double-Submit); Voraussetzung ist eine CORS-Sperre ohne Origin-Reflexion
+        mit Credentials. Parallele-Tabs-Race: der Client serialisiert Refreshes
+        (Single-Flight, Web Locks API); Keycloak toleriert kleine Refresh-Reuse
+        (`refreshTokenMaxReuse`) als Defense-in-Depth (STRIDE-1).
+      security: []
+      responses:
+        '200':
+          description: Neuer Access-Token; Refresh-Cookie rotiert.
+          headers:
+            Set-Cookie:
+              description: Rotiertes `__Host-edms_rt` (Attribute wie /auth/callback).
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+              examples:
+                ok:
+                  summary: Regelfall
+                  value:
+                    accessToken: '<jwt>'
+                    tokenType: Bearer
+                    expiresIn: 300
+        '401':
+          description: >
+            Kein/ungültiges/abgelaufenes Refresh-Token bzw. Idle-/Absolut-
+            Timeout überschritten. SPA startet neuen Login.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: >
+            CSRF-Abwehr — `Origin` fehlt oder nicht in der serverseitigen
+            Allowlist (Header wird NICHT als Request-Parameter modelliert).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [auth]
+      summary: Abmelden (idempotent; Refresh-Cookie + Keycloak-Session beenden)
+      description: >
+        Löscht das Refresh-Cookie und beendet die Keycloak-Session
+        (RP-initiated / Backchannel-Logout, Refresh-Token-Widerruf).
+        Idempotent: mehrfacher Aufruf liefert weiterhin 204. CSRF-Schutz wie
+        /auth/refresh (SameSite=Strict + serverseitiger Origin-Allowlist-Check,
+        CORS ohne Origin-Reflexion). Pflicht-Audit-Event `auth.abmeldung.erfolg`.
+      security: []
+      responses:
+        '204':
+          description: Abgemeldet (oder war bereits abgemeldet — idempotent).
+          headers:
+            Set-Cookie:
+              description: >
+                `__Host-edms_rt` mit Max-Age=0 gelöscht.
+              schema:
+                type: string
+        '403':
+          description: >
+            CSRF-Abwehr — `Origin` fehlt oder nicht in der serverseitigen
+            Allowlist (Header wird NICHT als Request-Parameter modelliert).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/session:
+    get:
+      operationId: authSession
+      tags: [auth]
+      summary: Aktuelle Sitzung/Prinzipal (Bearer-geschützt)
+      description: >
+        Liefert die aus dem VALIDIERTEN Access-Token abgeleitete Sitzungssicht
+        (opake `sub`, gemappte Rollen, actor_typ) für die SPA-UI. Läuft über
+        den globalen JwtAuthGuard (Default-Security oauth2). Enthält KEINE
+        Klartext-PII.
+      responses:
+        '200':
+          description: Sitzungssicht des validierten Prinzipals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionInfo'
+              examples:
+                betrieb:
+                  summary: Betriebs-Nutzer
+                  value:
+                    sub: 'b3b1e9c2-0000-7000-8000-000000000000'
+                    actorTyp: benutzer
+                    roles: [betrieb]
+        '401':
+          description: Kein/ungültiges/abgelaufenes Access-Token.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        OIDC via Keycloak (ADR-0002, Realm `edms`). Bearer-Access-Token im
+        Authorization-Header, serverseitig gegen die Keycloak-JWKS validiert
+        (Alg-Allowlist RS256/ES256, Signatur/iss/aud/azp/exp/nbf, Clock-Skew 5 s,
+        jose). Default = deny (JwtAuthGuard ersetzt den Deny-by-default-Stub, D1).
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.local/realms/edms/protocol/openid-connect/auth
+          tokenUrl: https://auth.example.local/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  schemas:
+    AccessTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [accessToken, tokenType, expiresIn]
+      description: >
+        Kurzlebiger Access-Token für das SPA-Memory (M3). Der Refresh-Token ist
+        NICHT enthalten (nur httpOnly-Cookie).
+      properties:
+        accessToken:
+          type: string
+          description: >
+            Signiertes JWT (Keycloak). NUR im Arbeitsspeicher halten, niemals
+            in localStorage/sessionStorage (frontend-react.md).
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn:
+          type: integer
+          minimum: 1
+          maximum: 300
+          description: "Restlaufzeit in Sekunden (A4: 300 = 5 min)."
+
+    SessionInfo:
+      type: object
+      additionalProperties: false
+      required: [sub, actorTyp, roles]
+      description: >
+        Aus dem validierten Token abgeleitete Sitzungssicht. Alle Felder
+        personenbeziehbar pseudonym (pii=false); keine Klartext-PII.
+      properties:
+        sub:
+          type: string
+          description: >
+            Opake Keycloak-Principal-ID. personenbeziehbar=true; pii=false;
+            art=opake-principal; zweckbindung=Sicherheit/Zugriffskontrolle
+            (Art. 32/88 DSGVO, § 26 BDSG). KEIN Hart-FK (rote Linie 5).
+        actorTyp:
+          type: string
+          enum: [benutzer, dienstkonto, system]
+          description: >
+            Akteurstyp (ADR-0003 §13.1; deckt actor_typ). Stammt aus einem
+            EXPLIZITEN Keycloak-Claim (Protocol-Mapper im Realm-as-Code, D1);
+            der Guard validiert fail-closed gegen dieses Enum — fehlender/
+            unbekannter Wert → 401 (keine Heuristik).
+        roles:
+          type: array
+          description: >
+            Gemappte interne Rollen (aus realm_access/resource_access, D1).
+          items:
+            type: string
+            enum: [betrieb, compliance-auditor, admin, geraete-support]
+        name:
+          type: string
+          description: >
+            OPTIONALER Anzeigename (Beschäftigtendatum). Nur wenn vom Realm
+            freigegeben; Datensparsamkeit Art. 5(1)(c). Default nicht gesetzt.
+
+    Problem:
+      # RFC 9457 erlaubt Extension-Member; daher bewusst KEIN
+      # additionalProperties:false. Response-Objekt, kein Request-DTO.
+      type: object
+      description: Fehlerobjekt nach RFC 9457 (application/problem+json).
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+          description: URI-Referenz, die den Fehlertyp identifiziert.
+        title:
+          type: string
+          description: Kurze, menschenlesbare Zusammenfassung des Fehlertyps.
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+          description: HTTP-Statuscode.
+        detail:
+          type: string
+          description: >
+            Menschenlesbare, PII-freie Detailbeschreibung. NIEMALS roher
+            IdP-/Token-/Netzwerk-Fehlertext, keine Tokens/Secrets (rote
+            Linie 2).
+        instance:
+          type: string
+          format: uri
+          description: URI-Referenz, die das konkrete Auftreten identifiziert.

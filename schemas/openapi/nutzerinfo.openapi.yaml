@@ -1,0 +1,637 @@
+# EDMS Nutzerinformations-API (TB-06) — OpenAPI-Contract
+#
+# Status: proposed. Beschreibt, was gebaut ist, nicht was freigegeben ist.
+#
+# Grundlage ist die Förderauflage TB-06 ([Q3] Technisches Merkblatt v2.2,
+# Kap. 6), wörtlich:
+#
+#   „Ein Endkunde ist mindestens monatlich über seinen Verbrauch und seine
+#    Energieeinsparungen zu informieren, wenn dies nicht vom Kunden explizit
+#    anders gewünscht wird (sog. Opt-Out)."
+#
+# WAS DIESE API IST UND WAS NICHT
+#   Sie ist die BETRIEBSSICHT: erzeugen, einsehen, Zustellung nachtragen.
+#   Sie ist NICHT der Kundenzugang — das Nutzerportal mit eigener
+#   Authentisierung ist ein eigenes Vorhaben.
+#
+#   Und sie INFORMIERT NICHT. Sie erzeugt den Datensatz; solange
+#   `zugestelltAt` leer ist, ist die Auflage nicht erfüllt. Das ist bewusst
+#   abfragbar gehalten (`GET`-Antwort trägt das Feld) statt kaschiert.
+#
+# BEKANNTE LÜCKE GEGENÜBER KAP. 6
+#   Verbräuche der erkannten Geräte- und Anlagengruppen, getrennt nach
+#   Gruppen, sind nicht enthalten: Die Geräteerkennung ist nicht gebaut. Eine
+#   leere Gruppenliste wäre eine Zusage, die niemand einlöst.
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Security-Scheme oauth2 als GLOBALER Default — kein öffentlicher Endpoint.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - Alle POST-Routen tragen `Idempotency-Key` (Pflicht).
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Nutzerinformations-API
+  version: 0.2.0
+  description: >
+    Monatliche Nutzerinformation nach TB-06 — Erzeugung, Einsicht und
+    Versand-/Bereitstellungsnachweis.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Entwicklung
+
+security:
+  - oauth2: []
+
+tags:
+  - name: nutzerinfo
+    description: Monatliche Nutzerinformation (TB-06)
+
+paths:
+  /nutzerinfo/informationen:
+    get:
+      operationId: nutzerinfoInformationenLesen
+      tags: [nutzerinfo]
+      summary: Verlauf der monatlichen Informationen eines Endkunden
+      description: >
+        ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb` und
+        `compliance-auditor` — für den Auditor ist es der Nachweis, dass die
+        Auflage erfüllt wird.
+
+        Neueste zuerst. Die Antwort trägt `zugestelltAt`: Eine Information
+        ohne Zustellzeitpunkt ist erzeugt, aber nicht zugestellt — und damit
+        ist die Auflage für diesen Monat nicht erfüllt.
+      parameters:
+        - name: endkundeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 24 }
+          description: Wie viele Monate zurück. Default 24 — zwei Jahre sind die übliche Kundensicht.
+      responses:
+        '200':
+          description: Verlauf, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Nutzerinformation' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/status:
+    get:
+      operationId: nutzerinfoStatusLesen
+      tags: [nutzerinfo]
+      summary: Ist der Monat durch?
+      description: >
+        ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb` und
+        `compliance-auditor`.
+
+        Ohne `monat` antwortet der Server für den letzten **abgeschlossenen**
+        Monat und sagt in der Antwort, welcher das war. Welcher Monat gerade
+        zählt, hängt an der Zeitzone und soll nicht in jeder Oberfläche neu
+        ausgerechnet werden — eine Zahl ohne ihren Monat ist keine Auskunft.
+
+        `anzahlOffen` ist die Zahl, auf die es ankommt: erzeugt, aber nicht
+        zugestellt. Für diese Endkunden ist die Auflage in diesem Monat nicht
+        erfüllt.
+
+        **Nicht enthalten** ist die Zahl der Endkunden ohne
+        Berechnungsgrundlage. Die kennt nur ein Lauf, weil sie aus dem
+        Vergleich mit den vorhandenen Berechnungsläufen entsteht — sie hier zu
+        schätzen hiesse, eine zweite, möglicherweise abweichende Wahrheit zu
+        erzeugen.
+      parameters:
+        - name: monat
+          in: query
+          required: false
+          schema: { type: string, pattern: '^\d{4}-\d{2}-01$' }
+          description: Monatserster. Fehlt er, wird der letzte abgeschlossene Monat ausgewertet.
+      responses:
+        '200':
+          description: Stand des Monats.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NutzerinfoMonatsstand' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/informationen/{informationId}:
+    parameters:
+      - name: informationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: nutzerinfoInformationLesen
+      tags: [nutzerinfo]
+      summary: Eine einzelne monatliche Information
+      description: ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb` und `compliance-auditor`.
+      responses:
+        '200':
+          description: Die Information.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Nutzerinformation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/laeufe:
+    post:
+      operationId: nutzerinfoLaufAusfuehren
+      tags: [nutzerinfo]
+      summary: Erzeugungslauf für einen abgeschlossenen Monat
+      description: >
+        ABAC-Aktion `create:nutzerinfo_lauf`. Rolle `betrieb`.
+
+        **Ohne `ausfuehren: true` ein Probelauf** — er zählt, schreibt aber
+        nichts. Dieselbe Linie wie beim Retention- und Migrations-Runner.
+
+        **Die interessante Zahl ist `ohneBerechnung`.** Für diese Kunden gibt
+        es keinen eindeutig bindbaren Berechnungslauf; sie können nicht
+        informiert werden, obwohl sie es müssten. Das ist die Zahl, die eine
+        Auflagenverletzung sichtbar macht — im Unterschied zu
+        `uebersprungenWiderspruch` (Opt-out, zulässig) und
+        `uebersprungenGesperrt` (Art. 18, zulässig).
+
+        Ein **laufender oder künftiger Monat** wird mit 400 abgelehnt: Er ist
+        nicht abgeschlossen, ergäbe einen zu niedrigen Verbrauch, und nach der
+        Zustellung wird nicht mehr korrigiert.
+
+        Die Zahlen werden **nicht neu gerechnet**. Sie kommen aus dem
+        Berechnungslauf, den auch der BAFA-Nachweis binden würde (jüngster,
+        selbst nicht ersetzter Lauf, dessen Periode den Monat enthält).
+        Widersprüchliche Kandidaten werden **nicht** aufgelöst — der Kunde
+        bekommt dann nichts, statt einer willkürlich gewählten Zahl.
+
+        Audit `nutzerinfo.information.erzeugt` (Aggregat je Lauf).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NutzerinfoLauf' }
+      responses:
+        '200':
+          description: Lauf ausgeführt bzw. Probelauf gezählt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NutzerinfoLaufErgebnis' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/informationen/{informationId}/bericht:
+    parameters:
+      - name: informationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: nutzerinfoBerichtLesen
+      tags: [nutzerinfo]
+      summary: Der Bericht, den der Endkunde zu sehen bekommt
+      description: >
+        ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb`, `compliance-auditor`.
+
+        Rechnet die Einsparung NICHT neu — sie kommt unveraendert aus der
+        eingefrorenen Zeile. Ergaenzt wird, was [Q3] Kap. 6 darueber hinaus
+        verlangt: die Verbraeuche der erkannten Geraetegruppen, getrennt nach
+        Gruppen, gebildet aus den Zuordnungen, die IM BERICHTSMONAT galten.
+      responses:
+        '200':
+          description: Der Bericht.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NutzerinfoBericht' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/informationen/{informationId}/zustellung:
+    parameters:
+      - name: informationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: nutzerinfoZustellungVermerken
+      tags: [nutzerinfo]
+      summary: Zustellung vermerken (Versand-/Bereitstellungsnachweis, TB-06)
+      description: >
+        ABAC-Aktion `zustellen:nutzerinfo`. Rolle `betrieb`.
+
+        Der Nachweis, den TB-06 ausdrücklich verlangt. Eigene Aktion und
+        nicht `create:*`: Der Erzeugungslauf leitet ab, die Zustellung erfüllt
+        die Auflage — wer erzeugen darf, muss nicht zustellen dürfen.
+
+        `POST .../zustellung` und nicht `PATCH` auf die Information: Es ist ein
+        Vorgang, kein Feld.
+
+        `zugestelltAt` ist Pflicht und kein `now()` — der Regelfall ist das
+        Nachtragen eines Vorgangs, der ausserhalb des Systems stattgefunden
+        hat (Brief, Übergabe). Ein Zeitpunkt in der Zukunft wird abgelehnt.
+
+        Eine zweite Zustellung antwortet **409** und lässt den ersten
+        Zeitpunkt stehen: Er belegt, dass die Auflage in DIESEM Monat erfüllt
+        wurde.
+
+        Audit `nutzerinfo.information.zugestellt` (Pflichtereignis, je
+        Information).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NutzerinfoZustellung' }
+      responses:
+        '200':
+          description: Vermerkt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Nutzerinformation' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/informationen/{informationId}/dokument:
+    parameters:
+      - name: informationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: nutzerinfoDokumentLesen
+      tags: [nutzerinfo]
+      summary: Das druckfertige Kundendokument zu EINER Information
+      description: >
+        ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb`, `compliance-auditor`.
+
+        Der Gegenstand, den der Endkunde erreicht — bis es ein Nutzerportal
+        gibt, ist das der Weg, mit dem die Auflage aus [Q3] Kap. 6
+        tatsaechlich erfuellbar ist.
+
+        `text/html` und nicht PDF: Ein PDF-Erzeuger waere eine neue
+        Produktivabhaengigkeit (freigabepflichtig,
+        `.claude/rules/dependencies.md`) fuer etwas, das der Browser mit
+        „Drucken -> Als PDF sichern" ohnehin leistet. Das Dokument ist
+        vollstaendig eigenstaendig: kein Skript, kein Bild, keine externe
+        Schrift, kein Netzzugriff beim Oeffnen.
+
+        Es rechnet nichts neu und ist deterministisch — gleiche Eingabe,
+        gleiches Ergebnis (Muster V0054: kein Byte-Archiv, sondern
+        Re-Rendering plus Hash-Vergleich).
+
+        Der DWD-Quellenvermerk erscheint NUR, wenn in den zugrunde liegenden
+        Berechnungslauf tatsaechlich DWD-Klimadaten eingegangen sind (Auflage
+        A-2/A20, `docs/datenquellen.md` DQ-001) — bei synthetischem Klima
+        waere er eine Falschangabe.
+      responses:
+        '200':
+          description: Das Dokument.
+          content:
+            text/html:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/dokumente:
+    get:
+      operationId: nutzerinfoMonatsmappeLesen
+      tags: [nutzerinfo]
+      summary: Die Versandmappe eines Monats (eine Information je Seite)
+      description: >
+        ABAC-Aktion `read:nutzerinfo`. Rollen `betrieb`, `compliance-auditor`.
+
+        Eigene Route, weil Postversand ein Stapelvorgang ist: einmal drucken,
+        einmal kuvertieren, einmal einliefern. Tausend Einzeldateien
+        nacheinander zu oeffnen ist kein Arbeitsablauf — und ohne
+        praktikablen Ablauf bleibt die Auflage unerfuellt.
+
+        Enthaelt bewusst ALLE Informationen des Monats, nicht nur die
+        unzugestellten: die Mappe ist auch der Beleg, was hinausgegangen ist.
+        Ein Monat ohne erzeugte Informationen antwortet **400** statt einer
+        leeren Mappe.
+      parameters:
+        - name: monat
+          in: query
+          required: true
+          schema: { type: string, pattern: '^\\d{4}-\\d{2}-01$' }
+          description: Monatserster, `YYYY-MM-01`.
+      responses:
+        '200':
+          description: Die Mappe.
+          content:
+            text/html:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /nutzerinfo/zustellungen:
+    post:
+      operationId: nutzerinfoSammelZustellungVermerken
+      tags: [nutzerinfo]
+      summary: Zustellung fuer einen ganzen Monat vermerken
+      description: >
+        ABAC-Aktion `zustellen:nutzerinfo`. Rolle `betrieb`.
+
+        Derselbe Vorgang wie einzeln, nur ueber den Stapel. Muesste der
+        Betrieb nach einem Postversand jede Information einzeln anklicken,
+        bliebe der Nachweis in der Praxis unvollstaendig — und ein
+        unvollstaendiger Versandnachweis ist gegenueber der
+        Bewilligungsbehoerde dasselbe wie kein Versand.
+
+        Bereits zugestellte Informationen bleiben UNBERUEHRT (ihr erster
+        Zeitpunkt ist der Nachweis) und werden in `anzahlBereitsZugestellt`
+        gezaehlt — kein Fehler, sondern der Normalfall bei einem Nachzuegler.
+
+        Audit `nutzerinfo.information.zugestellt` **je Information**, nicht
+        eines fuer den Stapel: Die Frage lautet spaeter immer „wurde DIESER
+        Kunde informiert?".
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NutzerinfoSammelZustellung' }
+      responses:
+        '200':
+          description: Vermerkt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NutzerinfoSammelZustellungErgebnis' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OIDC (Keycloak) — Bearer-Token aus dem BFF.
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/edms/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8080/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+      description: Pflicht auf allen schreibenden Routen (.claude/rules/api-contracts.md).
+
+  schemas:
+    Zustellweg:
+      type: string
+      enum: [portal_bereitgestellt, email, brief, persoenlich]
+      description: >
+        Wie die Information den Endkunden erreicht hat. **Heute existiert
+        keiner dieser Wege im System** — die Liste beschreibt, was vorgesehen
+        ist. Ein Nachweis ohne Angabe des Weges ist keine Aussage:
+        „informiert" ist etwas anderes als „bereitgestellt".
+
+    BerichtGruppe:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, bezeichnung, verbrauchKwh, anteilPct]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        bezeichnung: { type: string }
+        verbrauchKwh: { type: number }
+        anteilPct:
+          type: number
+          description: Anteil am ERFASSTEN Gesamtverbrauch des Monats — nicht am zugeordneten.
+
+    NutzerinfoBericht:
+      type: object
+      additionalProperties: false
+      required: [information, vonTag, bisTag, gruppen, zugeordnetKwh, nichtZugeordnetKwh, ohneTageswerte, vormonatDeltaKwh, vormonatIstKwh]
+      properties:
+        information: { $ref: '#/components/schemas/Nutzerinformation' }
+        vonTag: { type: string, format: date }
+        bisTag: { type: string, format: date }
+        gruppen:
+          type: array
+          items: { $ref: '#/components/schemas/BerichtGruppe' }
+          description: Leer, wenn keine Zuordnung bestand — eine erfundene Aufteilung waere schlimmer als keine.
+        zugeordnetKwh: { type: number }
+        nichtZugeordnetKwh: { type: number }
+        ohneTageswerte:
+          type: boolean
+          description: '`true` = keine Tageswerte im Monat; die Aufteilung ist dann unbekannt, nicht 0.'
+        vormonatDeltaKwh:
+          type: [number, 'null']
+          description: Die Differenz, die der Kunde im Vormonat TATSAECHLICH gelesen hat.
+        vormonatIstKwh: { type: [number, 'null'] }
+
+    Nutzerinformation:
+      type: object
+      additionalProperties: false
+      required: [id, endkundeId, energietraeger, monat, berechnungslaufId, referenzKwh, istKwh, deltaKwh, qualitaetsStufe, abdeckungPct, tageFehlend, kandidatenAnzahl, inhaltHashHex, erzeugtAt, zugestelltAt, zustellweg]
+      properties:
+        id: { type: string, format: uuid }
+        endkundeId: { type: string, format: uuid }
+        energietraeger: { type: string }
+        monat: { type: string, format: date, description: Monatserster. }
+        berechnungslaufId:
+          type: string
+          format: uuid
+          description: >
+            Welche Rechnung der Kunde gesehen hat. Ohne dieses Feld wäre die
+            Information eine Zahl ohne Herkunft — und der Unterschied zum
+            BAFA-Nachweis nicht aufklärbar.
+        referenzKwh: { type: number, description: Was nach Baseline zu erwarten war (R_m). }
+        istKwh: { type: number, description: Was tatsächlich verbraucht wurde (A_m). }
+        deltaKwh:
+          type: number
+          description: >
+            `referenzKwh - istKwh`. **Positiv = Einsparung, negativ =
+            Mehrverbrauch.** Bewusst OHNE die Vorzeichen-/Lückenregel des
+            BAFA-Nachweises: Kap. 6 verlangt die Angabe von Einsparungen UND
+            Mehrverbräuchen; einen Mehrverbrauch auf null zu setzen wäre eine
+            Beschönigung.
+        qualitaetsStufe:
+          type: string
+          enum: [belastbar, eingeschraenkt, nicht_ausweisbar]
+        abdeckungPct: { type: number }
+        tageFehlend:
+          type: integer
+          description: >
+            Gehört in die Kundeninformation, weil Kap. 6 „nachvollziehbar"
+            verlangt: Eine Einsparung aus einem Monat mit acht fehlenden Tagen
+            ist eine andere Aussage als eine aus einem vollständigen.
+        kandidatenAnzahl: { type: integer, description: '>1 = mehrdeutige, aber wertgleiche Läufe.' }
+        inhaltHashHex:
+          type: string
+          description: SHA-256 des kanonisierten Inhalts. Beantwortet - Stand das damals wirklich so drin?
+        erzeugtAt: { type: string, format: date-time }
+        zugestelltAt:
+          type: [string, 'null']
+          format: date-time
+          description: >
+            Versand-/Bereitstellungsnachweis. **`null` heisst: die Auflage ist
+            für diesen Monat nicht erfüllt.**
+        zustellweg:
+          oneOf:
+            - $ref: '#/components/schemas/Zustellweg'
+            - type: 'null'
+
+    NutzerinfoMonatsstand:
+      type: object
+      additionalProperties: false
+      required: [monat, anzahlErzeugt, anzahlZugestellt, anzahlOffen]
+      properties:
+        monat:
+          type: string
+          format: date
+          description: Der ausgewertete Monat — steht in der Antwort, weil der Server ihn bei fehlender Angabe selbst bestimmt.
+        anzahlErzeugt: { type: integer }
+        anzahlZugestellt: { type: integer }
+        anzahlOffen:
+          type: integer
+          description: Erzeugt, aber nicht zugestellt. Für diese Endkunden ist die Auflage offen.
+
+    NutzerinfoLauf:
+      type: object
+      additionalProperties: false
+      required: [monat]
+      properties:
+        monat:
+          type: string
+          pattern: '^\d{4}-\d{2}-01$'
+          description: Monatserster eines ABGESCHLOSSENEN Monats.
+        ausfuehren:
+          type: boolean
+          description: Fehlt es oder ist es `false`, läuft der Lauf als Probelauf.
+
+    NutzerinfoLaufErgebnis:
+      type: object
+      additionalProperties: false
+      required: [modus, monat, anzahlPaare, anzahlErzeugt, uebersprungenWiderspruch, uebersprungenGesperrt, ohneBerechnung]
+      properties:
+        modus: { type: string, enum: [probelauf, ausfuehrung] }
+        monat: { type: string, format: date }
+        anzahlPaare: { type: integer }
+        anzahlErzeugt: { type: integer }
+        uebersprungenWiderspruch:
+          type: integer
+          description: Opt-out nach TB-06 — zulässig, sogar gefordert.
+        uebersprungenGesperrt:
+          type: integer
+          description: Verarbeitung nach Art. 18 DSGVO eingeschränkt — zulässig.
+        ohneBerechnung:
+          type: integer
+          description: >
+            **Ein Befund.** Kein eindeutig bindbarer Berechnungslauf — der
+            Kunde kann nicht informiert werden, obwohl er es müsste.
+
+    NutzerinfoZustellung:
+      type: object
+      additionalProperties: false
+      required: [zustellweg, zugestelltAt]
+      properties:
+        zustellweg: { $ref: '#/components/schemas/Zustellweg' }
+        zugestelltAt: { type: string, format: date-time }
+
+    NutzerinfoSammelZustellung:
+      type: object
+      additionalProperties: false
+      required: [monat, zustellweg, zugestelltAt]
+      properties:
+        monat: { type: string, pattern: '^\\d{4}-\\d{2}-01$' }
+        zustellweg: { $ref: '#/components/schemas/Zustellweg' }
+        zugestelltAt: { type: string, format: date-time }
+
+    NutzerinfoSammelZustellungErgebnis:
+      type: object
+      additionalProperties: false
+      required:
+        [monat, zustellweg, zugestelltAt, anzahlGesamt, anzahlVermerkt, anzahlBereitsZugestellt]
+      properties:
+        monat: { type: string }
+        zustellweg: { $ref: '#/components/schemas/Zustellweg' }
+        zugestelltAt: { type: string, format: date-time }
+        anzahlGesamt:
+          type: integer
+          description: Informationen des Monats insgesamt.
+        anzahlVermerkt:
+          type: integer
+          description: In DIESEM Vorgang neu vermerkt.
+        anzahlBereitsZugestellt:
+          type: integer
+          description: >
+            Bereits vorher zugestellt und deshalb uebergangen. Kein
+            Fehlerzaehler — der erste Zeitpunkt bleibt der Nachweis.
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457.
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Nicht authentifiziert.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Nicht berechtigt.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NichtGefunden:
+      description: Nicht gefunden.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Konflikt:
+      description: Konflikt mit dem aktuellen Zustand.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unerwartet:
+      description: Unerwarteter Fehler.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }

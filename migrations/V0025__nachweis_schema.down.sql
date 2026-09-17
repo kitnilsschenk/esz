@@ -1,0 +1,61 @@
+-- V0025__nachweis_schema.down.sql
+--
+-- Rollt Schema `nachweis` (ADR-0007 Teil B/C) vollstaendig zurueck.
+-- Greenfield-Migration (kein Bestandsschema, ADR-0007 selbst Status
+-- "proposed" -- diese Migration ist Design-Entwurf, s. Up-Datei-Kopf) --
+-- KEINE Produktivdaten, `DROP SCHEMA nachweis CASCADE` ist hier vertretbar.
+--
+-- ACHTUNG (Reihenfolge): schlaegt fehl, falls eine SPAETERE Migration
+-- (z. B. die additive Primaerenergie-Faktorschicht aus B8) eine FK-
+-- Referenz auf ein Objekt in `nachweis` angelegt hat -- in diesem Fall
+-- zuerst jene Migration zurueckrollen. Diese Datei rollt NICHT V0024
+-- zurueck (Verfahrenskatalog-Erweiterung + A11-Schema-Delta) -- V0024
+-- danach separat zurueckrollen, falls gewuenscht.
+
+-- =====================================================================
+-- (1) Rollen-Mitgliedschaft VOR dem Schema-Drop entfernen
+-- =====================================================================
+-- `GRANT edms_analytics_detail_reader TO edms_nachweis_renderer` ist eine
+-- Rollen-Mitgliedschaft (kein Objekt-Grant IN `nachweis`) -- ueberlebt
+-- `DROP SCHEMA nachweis CASCADE` unveraendert und muss explizit entfernt
+-- werden, sonst behaelt eine ansonsten leere Rolle stillschweigend
+-- Leserechte auf `analytics.eingang_messwert_tag`/`eingang_einflussgroesse`.
+REVOKE edms_analytics_detail_reader FROM edms_nachweis_renderer;
+
+-- =====================================================================
+-- (2) Schema-CASCADE-Drop
+-- =====================================================================
+-- Entfernt alle dreizehn Tabellen, beide Trigger-Funktionen
+-- (set_updated_at, pruefe_einreichung_faehig), alle Indizes/Constraints --
+-- ausschliesslich V0025-Eigentum. Schema-USAGE-Grants an edms_app/
+-- edms_nachweis_renderer/edms_nachweis_reader/edms_retention sind an das
+-- Schema-Objekt selbst gebunden und verschwinden mit ihm.
+--
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): Greenfield-Migration ohne Produktivdaten ->
+-- .claude/rules/database-migrations.md verlangt HIER keinen gesonderten
+-- Backup-Nachweis. Wurde diese Migration bereits mit echten (auch
+-- synthetischen Pilot-)Daten befuellt, ist vor diesem Rollback ein Backup
+-- zu ziehen und die User-Freigabe einzuholen (devops-lead-Abstimmung,
+-- analog V0002/V0003/V0008/V0010/V0019).
+DROP SCHEMA nachweis CASCADE;
+
+-- =====================================================================
+-- (3) Rollen bewusst NICHT gedroppt (dokumentierter Teil-No-Op,
+-- Praezedenzfall V0003/V0010/V0019)
+-- =====================================================================
+-- Begruendung (analog V0019):
+--   (a) Rollen sind CLUSTER-, nicht datenbankweit -- dieser Rollback kann
+--       aus der aktuellen Datenbank heraus nicht sicher pruefen, ob
+--       edms_nachweis_owner/edms_nachweis_renderer/edms_nachweis_reader in
+--       einer ANDEREN Datenbank desselben Clusters noch Grantee/Owner sind.
+--   (b) Nach Schritt (2)+(1) besitzt keine der drei Rollen mehr irgendein
+--       Privileg auf ein konkretes Objekt dieses Features -- die
+--       verbleibende Rollen-Huelle ist inert/harmlos.
+--
+-- Wer diese Migration auf einer isolierten Dev-/Test-Instanz wirklich
+-- vollstaendig zurueckrollen will (inkl. Rollen), tut das bewusst und
+-- manuell ausserhalb des Runners -- NICHT ueber diese Datei:
+--   DROP ROLE IF EXISTS edms_nachweis_owner;
+--   DROP ROLE IF EXISTS edms_nachweis_renderer;
+--   DROP ROLE IF EXISTS edms_nachweis_reader;

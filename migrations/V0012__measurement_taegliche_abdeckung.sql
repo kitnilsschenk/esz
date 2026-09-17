@@ -1,0 +1,126 @@
+-- V0012__measurement_taegliche_abdeckung.sql
+--
+-- ADR-Bezug: docs/adr/ADR-0005-messdaten-ingestion.md §27 ("D15 -- DE-02/
+-- TB-04: Luecken-/Ausfall-Erkennung", Entscheidung "DE-02 (TS-2, Blocker,
+-- geloest)"), konsistent mit ADR-0004 §14 (docs/adr/ADR-0004-kern-
+-- datenmodell-energie.md -- dort das allgemeine Rollup-Muster bereits
+-- geprueft: "ein Full-Refresh-Materialized-View skaliert bei hunderten
+-- Mio. Zeilen nicht und ist damit verworfen"). Design-Owner: technical-
+-- director/timescale-engineer (ADR-0005 Phase-2-Design). Migrations-
+-- Entwurf: database-lead. Teil des Phase-4-Migrations-Batches
+-- (V0010-V0013), NUR Schema -- Ingest-Gate bleibt ZU (s. V0010-Datei-Kopf).
+--
+-- Review vor Merge (ausstehend): database-lead (Migrations-Entwurf) +
+-- timescale-engineer (Rollup-Muster-Konformitaet mit ADR-0004 §14) --
+-- KEINE PII-Spalte, kein compliance-director-Pflichtreview noetig
+-- (energy/measurement-Fachattribute, rote Linie 1).
+--
+-- =====================================================================
+-- TS-2 (Blocker, geloest): normale Tabelle statt MATERIALIZED VIEW
+-- =====================================================================
+-- KEINE `MATERIALIZED VIEW` (Full-Refresh skaliert bei hunderten Mio.
+-- Zeilen NICHT -- ADR-0004 §14 hat dieses Muster fuer den allgemeinen
+-- Rollup-Fall bereits geprueft und verworfen; ADR-0005 uebernimmt exakt
+-- dasselbe Muster fuer die DE-02-Tages-Abdeckung). KEIN Hypertable (v1-
+-- Zeilenzahl: ein Eintrag je Kanal UND Tag -- Groessenordnung "aktive
+-- Kanaele x Betriebstage", um Groessenordnungen kleiner als die
+-- zugrundeliegende measurement.messwert-Zeitreihe selbst; kein
+-- Zeitreihen-Sizing-/Chunking-Bedarf).
+--
+-- Stattdessen: normale Tabelle mit Watermark-Semantik + `UNIQUE
+-- (messkanal_key, tag)` als inkrementelles Upsert-Ziel fuer einen
+-- periodischen Delta-Job (`pg_cron`-Vorschlag, s. u. -- NICHT Teil dieser
+-- Migration, s. Entscheidung D-CRON unten). Der Job verarbeitet NUR neue,
+-- abgeschlossene Zeitfenster seit der letzten Watermark UND haelt ein
+-- Reprocessing-Fenster fuer Spaetankuenfte/Backfill offen (ADR-0005 §27,
+-- analog ADR-0004 §14) -- konkrete Fenstergroesse = Phase-4-Kalibrierung
+-- (timescale-engineer).
+--
+-- Natuerlicher Schluessel (messkanal_key, tag) statt UUID-Surrogat
+-- (dokumentierte Abweichung, analog audit.ketten_kopf/ingest.kanal_status --
+-- V0002/V0003/V0011-Praezedenz): eine reine Rollup-/Aggregations-Cache-
+-- Tabelle, aus measurement.messwert jederzeit rekonstruierbar, hat keinen
+-- Bedarf an externer UUID-Adressierbarkeit einzelner Zeilen.
+-- messkanal_key FK-los (Konvention V0002/ADR-0004 S3, wie measurement.
+-- messwert/ingest.kanal_status).
+--
+-- KEIN separates `created_at` (dokumentierte Abweichung, analog audit.
+-- ketten_kopf.updated_at-Reasoning, V0003): `aktualisiert_at` traegt bei
+-- jedem (Erst-)Schreiben denselben Zeitpunkt wie eine `created_at`-Spalte es
+-- taete -- eine zweite, inhaltsgleiche Spalte waere reine Doppelung fuer
+-- eine reine Watermark-/Rollup-Tabelle ohne fachliche created_at/updated_at-
+-- Unterscheidung.
+
+CREATE TABLE measurement.taegliche_abdeckung (
+    messkanal_key   integer     NOT NULL,       -- LOGISCHER Verweis auf energy.messkanal.kanal_key (kein FK, Konvention V0002)
+    tag             date        NOT NULL,       -- time_bucket('1 day', ts)::date (UTC)
+    anzahl          integer     NOT NULL CHECK (anzahl >= 0),  -- count(*) je (messkanal_key, tag) -- Datenqualitaets-Sanity-Check, kein spekulativer Constraint
+    aktualisiert_at timestamptz NOT NULL DEFAULT now(),        -- letzter Delta-Job-Schreibzeitpunkt fuer diese Zeile
+    PRIMARY KEY (messkanal_key, tag)
+);
+
+-- =====================================================================
+-- D-CRON (Entscheidung: Job-Registrierung NICHT Teil dieser Migration)
+-- =====================================================================
+-- Entscheidung: die tatsaechliche `pg_cron`-Job-Registrierung (`cron.
+-- schedule(...)`) UNTERBLEIBT in dieser Migration -- nur als kommentierter
+-- Vorschlag (unten) beigelegt. Begruendung:
+--   (1) `pg_cron` ist -- anders als `timescaledb`/`btree_gist` (V0001) --
+--       bislang in KEINEM Migrations- oder Deployment-Artefakt dieses
+--       Repos als installierte Extension nachgewiesen (kein `CREATE
+--       EXTENSION pg_cron` existiert bislang; deployment/docker/docker-
+--       compose.dev.yml zeigt keine pg_cron-Konfiguration). `pg_cron`
+--       verlangt -- analog zu timescaledb (V0001-Kommentar) --
+--       `shared_preload_libraries=pg_cron` PLUS eine `cron.database_name`-
+--       Festlegung, BEIDES Server-Neustart-/Instanz-Konfiguration, kein
+--       reiner SQL-Migrationsschritt (devops-lead-Scope, analog V0001).
+--   (2) `cron.schedule(...)` ist ein CLUSTER-/INSTANZWEITER Seiteneffekt
+--       (schreibt in die globale `cron.job`-Tabelle einer Extension, die
+--       ausserhalb des `migrations/`-Namensraums lebt) -- kein reiner
+--       "Schema anlegen"-Schritt und damit ausserhalb des fuer diesen
+--       Phase-4-Batch explizit vereinbarten Scopes ("Diese Migrationen
+--       legen nur Schema an, keine Daten", Arbeitsauftrag). Ein tatsaechlich
+--       LAUFENDER Job waere zudem operative Verdrahtung, die -- konsistent
+--       mit dem synthetic-only-Ingest-Gate (ADR-0005 §0/§19) -- VOR dem
+--       Oeffnen des Gates ohnehin nichts zu tun haette (keine Zeilen in
+--       measurement.messwert).
+--   (3) Least-Privilege-Rolle fuer den Job (Auftragsvorgabe) existiert noch
+--       NICHT -- eine solche Rolle jetzt spekulativ anzulegen, ohne dass
+--       ein Job sie je nutzt, waere selbst eine Form spekulativer
+--       Infrastruktur (vgl. "keine spekulativen Indizes"-Grundsatz,
+--       sinngemaess auf Rollen uebertragen).
+-- ERGEBNIS: die Job-Registrierung ist ein OPS-RUNBOOK-Punkt (devops-lead),
+-- nachzuziehen SOBALD (a) `pg_cron` als Extension im Ziel-Image verfuegbar
+-- ist (devops-lead prueft/erweitert das Docker-Image) UND (b) das Ingest-
+-- Gate geoeffnet wird (compliance-director/technical-director). Der
+-- folgende Block ist eine reine SQL-Kommentar-Skizze, KEINE ausgefuehrte
+-- Anweisung:
+--
+-- -- Vorschlag (Ops-Runbook, NICHT in dieser Migration ausgefuehrt):
+-- -- CREATE EXTENSION IF NOT EXISTS pg_cron;  -- erfordert shared_preload_libraries=pg_cron (Server-Neustart, devops-lead)
+-- -- CREATE ROLE edms_rollup_worker NOLOGIN;  -- Least-Privilege-Rolle, analog edms_ingest_worker (V0010)
+-- -- GRANT USAGE ON SCHEMA measurement TO edms_rollup_worker;
+-- -- GRANT SELECT ON measurement.messwert TO edms_rollup_worker;
+-- -- GRANT SELECT, INSERT, UPDATE ON measurement.taegliche_abdeckung TO edms_rollup_worker;
+-- -- SELECT cron.schedule(
+-- --   'edms_ingest_taegliche_abdeckung_delta',        -- domaenenpraefixierter Jobname (Konvention: edms_<domaene>_<zweck>)
+-- --   '7 3 * * *',                                     -- taeglich 03:07 UTC (nach Mitternacht, ausserhalb typischer Ingest-Spitzen)
+-- --   $$INSERT INTO measurement.taegliche_abdeckung (messkanal_key, tag, anzahl, aktualisiert_at)
+-- --     SELECT messkanal_key, time_bucket('1 day', ts)::date, count(*), now()
+-- --       FROM measurement.messwert
+-- --      WHERE ts >= <watermark>            -- letzte verarbeitete Grenze
+-- --        AND ts <  <abgeschlossenes_fenster>  -- s. Reprocessing-Fenster, ADR-0005 §27
+-- --      GROUP BY 1, 2
+-- --     ON CONFLICT (messkanal_key, tag) DO UPDATE
+-- --       SET anzahl = EXCLUDED.anzahl, aktualisiert_at = EXCLUDED.aktualisiert_at$$
+-- -- );
+--
+-- Reprocessing-Fenster (Spaetankuenfte/Backfill): konkrete Fenstergroesse =
+-- Phase-4-Kalibrierung (timescale-engineer, ADR-0005 §27) -- NICHT Teil
+-- dieser Migration.
+--
+-- Konsumenten-Grants (EnergyMonitoringRepository/edms_app, ADR-0005 §27):
+-- ebenfalls NICHT Teil dieser Migration -- folgen der noch ausstehenden
+-- allgemeinen RBAC-DB-Rollen-Verdrahtung fuer energy/measurement (ADR-0002-
+-- Scope, in diesem Repo bislang in KEINER Migration umgesetzt, s. finale
+-- Antwort/offene Punkte).

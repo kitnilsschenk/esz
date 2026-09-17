@@ -1,0 +1,334 @@
+{
+  "realm": "edms",
+  "enabled": true,
+  "displayName": "EDMS",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "editUsernameAllowed": false,
+  "resetPasswordAllowed": false,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "bruteForceStrategy": "MULTIPLE",
+  "failureFactor": 5,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and specialChars(1) and notUsername(1) and notEmail(1) and passwordHistory(5) and hashAlgorithm(argon2)",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 1,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "otpSupportedApplications": [
+    "FreeOTP",
+    "Google Authenticator"
+  ],
+  "requiredActions": [
+    {
+      "alias": "TERMS_AND_CONDITIONS",
+      "name": "Terms and Conditions",
+      "providerId": "TERMS_AND_CONDITIONS",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 20,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 40,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 54,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 57,
+      "config": {}
+    },
+    {
+      "alias": "delete_account",
+      "name": "Delete Account",
+      "providerId": "delete_account",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 60,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_EMAIL",
+      "name": "Update Email",
+      "providerId": "UPDATE_EMAIL",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 70,
+      "config": {}
+    },
+    {
+      "alias": "webauthn-register",
+      "name": "Webauthn Register",
+      "providerId": "webauthn-register",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 80,
+      "config": {}
+    },
+    {
+      "alias": "webauthn-register-passwordless",
+      "name": "Webauthn Register Passwordless",
+      "providerId": "webauthn-register-passwordless",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 90,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_PROFILE",
+      "name": "Verify Profile",
+      "providerId": "VERIFY_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 100,
+      "config": {}
+    },
+    {
+      "alias": "delete_credential",
+      "name": "Delete Credential",
+      "providerId": "delete_credential",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 110,
+      "config": {}
+    },
+    {
+      "alias": "idp_link",
+      "name": "Linking Identity Provider",
+      "providerId": "idp_link",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 120,
+      "config": {}
+    },
+    {
+      "alias": "CONFIGURE_RECOVERY_AUTHN_CODES",
+      "name": "Recovery Authentication Codes",
+      "providerId": "CONFIGURE_RECOVERY_AUTHN_CODES",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 130,
+      "config": {}
+    },
+    {
+      "alias": "update_user_locale",
+      "name": "Update User Locale",
+      "providerId": "update_user_locale",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 1000,
+      "config": {}
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "betrieb",
+        "description": "Internes Betriebs-Team: Stammdaten-CRUD + Monitoring (ADR-0002 Teil A, Persona A). DS-01: disjunkt von compliance-auditor/admin, kein Composite.",
+        "composite": false
+      },
+      {
+        "name": "compliance-auditor",
+        "description": "Auditor/Compliance: strikt LESEND auf Nachweis-/Audit-Sichten (ADR-0002 Teil A, Persona B). DS-01: NIE Personalunion mit admin, kein Composite.",
+        "composite": false
+      },
+      {
+        "name": "admin",
+        "description": "Benutzer-/System-Administration (ADR-0002 Teil A). DS-01: ohne Auditor-Rechte in Personalunion, kein Composite.",
+        "composite": false
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "edms-bff",
+      "name": "EDMS BFF (NestJS Backend)",
+      "description": "Vertraulicher Client, Standard-Flow (Authorization-Code) mit PKCE S256 IdP-seitig erzwungen (ADR-0002 D1/D2/D4, STRIDE-2). Kein Secret in diesem Export (rote Linie 4) - wird durch tools/keycloak/bootstrap-secret.sh via Admin-REST-API gesetzt.",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "consentRequired": false,
+      "redirectUris": [
+        "http://localhost:5180/auth/callback",
+        "http://127.0.0.1:5180/auth/callback",
+        "http://localhost:3000/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5180",
+        "http://127.0.0.1:5180"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "actor_typ",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "actor_typ",
+            "claim.value": "benutzer",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "edms-worker",
+      "name": "EDMS Service-Account-Client (Dienstkonto-Template)",
+      "description": "Client-Credentials-Template fuer Dienstkonten (ADR-0002 Persona C). Kein Secret im Export (rote Linie 4). Konkrete Worker klonen dieses Muster (siehe deployment/keycloak/README.md).",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "consentRequired": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "protocolMappers": [
+        {
+          "name": "actor_typ",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "actor_typ",
+            "claim.value": "dienstkonto",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "dev-betrieb-01",
+      "enabled": true,
+      "firstName": "Devuser",
+      "lastName": "Betrieb",
+      "email": "dev-betrieb-01@edms-dev.invalid",
+      "emailVerified": true,
+      "requiredActions": [
+        "CONFIGURE_TOTP",
+        "UPDATE_PASSWORD"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "DevOnly-Dummy-2026!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "betrieb"
+      ]
+    },
+    {
+      "username": "dev-auditor-01",
+      "enabled": true,
+      "firstName": "Devuser",
+      "lastName": "Auditor",
+      "email": "dev-auditor-01@edms-dev.invalid",
+      "emailVerified": true,
+      "requiredActions": [
+        "CONFIGURE_TOTP",
+        "UPDATE_PASSWORD"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "DevOnly-Dummy-2026!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "compliance-auditor"
+      ]
+    },
+    {
+      "username": "dev-admin-01",
+      "enabled": true,
+      "firstName": "Devuser",
+      "lastName": "Admin",
+      "email": "dev-admin-01@edms-dev.invalid",
+      "emailVerified": true,
+      "requiredActions": [
+        "CONFIGURE_TOTP",
+        "UPDATE_PASSWORD"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "DevOnly-Dummy-2026!",
+          "temporary": true
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    }
+  ]
+}

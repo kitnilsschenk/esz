@@ -1,0 +1,39 @@
+-- V0081__einfluss_befund_select_spaltenscharf.sql
+--
+-- Teil 2 von 3 der V0079-Nachbesserung (`security-lead`-Review 2026-09-16).
+-- Teil 1 ist V0080 (Audit-Schreibpfad), Teil 3 ist V0082 (Dokumentation von
+-- `zeitraum_bis`).
+--
+-- Eigene Datei, weil es eine eigene Entscheidung ist: V0080 behebt einen
+-- Sicherheitsbefund, DIESE Migration geht ueber den Befund hinaus. Das Review
+-- hat sie ausdruecklich als "tragfaehig, aber nachzubessern -- kein Blocker"
+-- eingestuft. Wer den Sicherheitsbefund zurueckbauen muss, soll diese
+-- Verengung nicht mit verlieren, und umgekehrt.
+--
+-- =====================================================================
+-- WORUM ES GEHT
+-- =====================================================================
+-- V0079 (D-GRANT-ERW (a)) erteilte `edms_einfluss_erkennung` `SELECT` auf die
+-- GANZE Tabelle `einfluss.befund`. Die Begruendung war richtig -- PostgreSQL
+-- verlangt fuer `INSERT ... RETURNING id` ein SELECT-Recht auf die
+-- zurueckgegebenen Spalten, und `Tb03BefundRepository.schreibeBefunde` braucht
+-- die `id`, um dazu das Audit-Ereignis zu schreiben. Nur wurde daraus ein
+-- Tabellen-Grant statt eines Spalten-Grants.
+--
+-- `RETURNING id` braucht ausschliesslich die Spalte `id`. Das Schema folgt an
+-- mehreren Stellen bereits dem spaltenscharfen Muster (V0020:249
+-- `GRANT UPDATE (gueltig_bis_monat, updated_at)`; V0010:253, V0023:88,
+-- V0042:161 fuer spaltenscharfes SELECT) -- V0079 war hier die Ausnahme, nicht
+-- die Regel.
+--
+-- Die Auswirkung ist begrenzt: `einfluss.befund` traegt laut B10/B12.5 keine
+-- Rohwerte, nur klassierte Groessen (`ueberschreitung_klasse`,
+-- `schwellwert_code`, Zeitraeume, `system_id`) -- kein Klartext-PII. Es geht
+-- hier um das Prinzip und um Konsistenz mit dem eigenen Vorbild, nicht um
+-- eine abgewendete Offenlegung. Genau deshalb steht es nicht in V0080: Ein
+-- Sicherheitsfix und eine Prinzipientreue-Korrektur sollten nicht denselben
+-- Rueckbauschalter teilen.
+-- =====================================================================
+
+REVOKE SELECT ON einfluss.befund FROM edms_einfluss_erkennung;
+GRANT SELECT (id) ON einfluss.befund TO edms_einfluss_erkennung;

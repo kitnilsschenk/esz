@@ -1,0 +1,300 @@
+/* EDMS Frontend — globale Design-Tokens + Tailwind-Einstieg
+   (Phase 4c-Feinschliff, visuelle Schicht auf ADR-0008 §23 / D11).
+
+   Quelle der Wahrheit für alle Werte hier: `Design-System` (Repo-Root, KIT-CI).
+   Übernommen wird die CI (Farben/Radien/Typografie/Dark-Mode-Mechanik) —
+   NICHT die dort beispielhaft gezeigte TicKIT-Domäne (Tickets/Topics).
+
+   Tailwind v4 ist CSS-first konfiguriert (kein `tailwind.config.js` nötig):
+   `@theme inline` unten registriert die Tokens als Utility-erzeugende
+   CSS-Variablen; `@tailwindcss/vite` scannt über Vites Modulgraph, welche
+   Dateien tatsächlich Klassen enthalten (kein `content: [...]`-Glob nötig).
+
+   Das `@theme inline` + „HSL-in-CSS-Variable, in hsl() konsumiert"-Muster
+   ist die verbreitete shadcn/ui-Konvention (MIT, ui.shadcn.com) — hier NICHT
+   aus shadcn kopiert, sondern für die KIT-CI-Werte aus Design-System neu
+   geschrieben (Eigenentwicklungs-Nachweis, `.claude/rules/dependencies.md`). */
+
+@import 'tailwindcss';
+
+/* Roboto self-hosted (DSGVO: kein Google-Fonts-CDN-Nachladen). Bewusst auf
+   `@fontsource/roboto@5.1.1` (Apache-2.0) gepinnt — ab `5.2.0` lizenziert
+   das Paket den (seither variable) Roboto-Font-Schnitt selbst unter
+   SIL-OFL-1.1, was NICHT auf der Lizenz-Whitelist steht
+   (`.claude/rules/dependencies.md`). Exaktes Pin (kein `^`) verhindert, dass
+   ein künftiges `pnpm update` stillschweigend auf die OFL-Version springt —
+   siehe Abschlussbericht des Phase-4c-Feinschliff-Auftrags für Details/Optionen. */
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+
+/* Tailwind v4 folgt standardmäßig `prefers-color-scheme`; Design-System +
+   `.claude/rules/frontend-react.md` verlangen Klassen-basiertes Dark-Mode
+   (`.dark` auf einem Vorfahren, z. B. `<html>`) — das ist die offizielle
+   v4-Ersatzsyntax für das frühere `darkMode: ["class"]` aus `tailwind.config.js`. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* KIT-CI-Basisfarben (Design-System „Farbpalette") als HSL-Tripel ohne
+     `hsl()`-Wrapper — so lassen sie sich unten mit `/ <alpha>` kombinieren
+     (Tailwind-Alpha-Stacking, z. B. `bg-primary/90`). */
+  --background: 0 0% 100%; /* #FFFFFF */
+  --foreground: 216 23% 34%; /* Slate #43546A */
+
+  --card: 0 0% 100%;
+  --card-foreground: 216 23% 34%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 216 23% 34%;
+
+  /* AA-Fix Runde 2 (Interaktions-Flächen, Auftrag vom 2026-07-15): Button-
+     /Badge-Text ist real `text-sm font-medium` (14px/500) bzw.
+     `text-xs font-semibold` (12px/600) — WCAG-technisch KEIN „large text"
+     (Schwelle: ≥18,7px bold oder ≥24px normal). Weißer Text auf dem
+     ursprünglichen #599C15 (35% L) maß nur ≈3,39:1 (Light) — unter 4,5:1.
+     Fix: Fläche auf denselben AA-sicheren Grünton wie --link abgedunkelt
+     (Vereinheitlichung statt zweier Grüntöne) → weißer Text jetzt ≈4,87:1.
+     Gilt auch für aktive Nav (nutzt dieselben Tokens: bg-primary
+     text-primary-foreground). */
+  --primary: 88 77% 28%; /* #4B7E10 statt #599C15 (35%) — Fläche für Buttons/aktive Nav/Badges */
+  --primary-foreground: 0 0% 100%;
+
+  /* --link deckt sich nach der Abdunklung von --primary zahlenmäßig mit ihr —
+     referenziert sie direkt statt einen zweiten Grünton zu pflegen
+     (Drift-Vermeidung). Nutzung weiterhin: `text-link` (Utility aus
+     @theme inline), z. B. für Fließtext-Links. */
+  --link: var(--primary); /* = #4B7E10, ≈4,87:1 auf Weiß */
+
+  /* "Helles Grün 10%" (Design-System Semantische Farben) — gelesen als
+     Green-Light-Farbton, stark aufgehellt zu einem dezenten Tint-Hintergrund. */
+  --secondary: 75 60% 95%;
+  --secondary-foreground: 216 23% 34%;
+
+  --muted: 0 0% 96%; /* #F5F5F5 */
+  /* AA-Fix (WCAG 2.2 AA, SC 1.4.3): Original Gray #999999 (60% L) lag bei
+     ≈2,85:1 auf Weiß — verfehlte sogar die 3:1-UI-Schwelle. Abgedunkelt auf
+     45% L → #737373, ≈4,83:1 auf --background. */
+  --muted-foreground: 0 0% 45%; /* #737373 statt #999999 */
+
+  --accent: 75 60% 50%; /* Green Light #99CC33 */
+  --accent-foreground: 216 23% 20%;
+
+  /* AA-Fix Runde 2: weißer Button-/Badge-Text auf dem Original-Pink (56% L)
+     maß ≈4,10:1 — unter 4,5:1 (Text ist real `text-xs`/`text-sm`, kein
+     „large text", s. o. bei --primary). Fläche leicht abgedunkelt auf
+     denselben Ton wie --destructive-text → weißer Text jetzt ≈4,86:1.
+     Dark Mode war mit ≈4,86:1 bereits AA-konform, dort daher keine Änderung
+     (siehe .dark unten). */
+  --destructive: 342 67% 50%; /* #D52A5D statt #DC4473 (56%) — Fläche für Button-/Badge-Fill */
+  --destructive-foreground: 0 0% 100%;
+
+  /* --destructive-text deckt sich im Light Mode jetzt zahlenmäßig mit
+     --destructive — referenziert sie direkt (Drift-Vermeidung). Im Dark Mode
+     bleibt --destructive-text ein eigener (hellerer) Wert, siehe .dark unten:
+     Text auf dunklem Grund braucht dort mehr statt weniger Lightness.
+     Nutzung weiterhin: `text-destructive-text`. */
+  --destructive-text: var(--destructive); /* = #D52A5D, ≈4,86:1 auf Weiß */
+
+  --warning: 38 84% 56%; /* Orange #EDA131 */
+  --warning-foreground: 216 23% 20%;
+
+  /* = Primary (Design-System „CSS Variablen") — jetzt als Referenz statt
+     Literal-Duplikat, damit der AA-Fix an --primary automatisch mitgilt:
+     Badge variant="success" nutzt `bg-success text-success-foreground`,
+     exakt dieselbe Fläche-mit-weißem-Text-Konstellation wie der
+     Primary-Button/die aktive Nav. */
+  --success: var(--primary);
+  --success-foreground: var(--primary-foreground);
+
+  --border: 0 0% 90%; /* #E5E5E5 */
+  --input: 0 0% 90%;
+  /* Fokus-Ring = Green Primary (war vorher exakt derselbe Literal-Wert) —
+     als Referenz, damit der AA-Fix an --primary den Ring automatisch
+     mitzieht statt zwei Grüntöne auseinanderlaufen zu lassen. */
+  --ring: var(--primary);
+
+  --radius: 0.5rem; /* lg, Design-System „Border Radius" */
+
+  /* Dataviz-Serienfarben (Verbrauchs-Balkendiagramm, `dataviz`-Skill) —
+     validiert gegen den mitgelieferten Farb-Validator (alle sechs Checks
+     bestanden: adjazente/Alle-Paare-CVD- und Normalsicht-Kontraste). FESTE
+     Reihenfolge, NIEMALS zyklisch vergeben (s.
+     `features/stammdaten/components/verbrauch/verbrauchPalette.ts`). Der
+     Dunkelmodus ist EIGENSTÄNDIG gewählt (keine automatische
+     Helligkeits-/Kontrastumkehrung der Hell-Werte) — daher als eigener
+     `.dark`-Block unten, analog zu allen übrigen Tokens dieser Datei. Bewusst
+     KEINE `@theme inline`-Registrierung (das wäre für generische Tailwind-
+     Utilities wie `bg-primary` gedacht) — das Diagramm referenziert diese
+     Custom Properties direkt über Tailwind-Arbitrary-Value-Klassen
+     (`fill-[var(--viz-serie-1)]` usw.), das genügt und hält die Token-Fläche
+     hier bewusst getrennt von den generischen Design-System-Farben. */
+  --viz-serie-1: #4b7e10; /* KIT-Grün */
+  --viz-serie-2: #1f6fb2;
+  --viz-serie-3: #b25a00;
+  --viz-serie-4: #6b4c9a;
+  /* NICHT Teil der validierten Palette — neutraler Grauton für eine (in der
+     Praxis nicht erwartete) fünfte Serie, s. `verbrauchPalette.ts`-Dok. */
+  --viz-serie-fallback: #767671;
+}
+
+.dark {
+  --background: 216 23% 12%;
+  --foreground: 0 0% 95%; /* #F2F2F2 */
+
+  --card: 216 23% 16%;
+  --card-foreground: 0 0% 95%;
+  --popover: 216 23% 16%;
+  --popover-foreground: 0 0% 95%;
+
+  /* "(40%)" / "(45%)" / "(50%)"-Anmerkungen in Design-System „Semantische
+     Farben" werden hier als aufgehellter Lightness-Wert derselben
+     Farbe gelesen (Tabelle: „Primärfarbe wird leicht aufgehellt für
+     besseren Kontrast" im Dark-Mode-Abschnitt). */
+  /* AA-Fix Runde 2: weißer Button-/Badge-Text auf dieser Fläche maß nur
+     ≈2,56:1 — unter sogar der 3:1-UI-Komponenten-Schwelle, nicht nur unter
+     4,5:1 (kritischster Einzelbefund des Audits). Grün-Fläche bewusst
+     UNVERÄNDERT gelassen: im Dark Mode soll der Primary-Akzent hell/
+     prominent bleiben — weiteres Abdunkeln der Fläche (Light-Mode-Ansatz)
+     hätte den Button gegen den dunklen Hintergrund unauffällig/„matschig"
+     gemacht. Stattdessen --primary-foreground von Weiß auf einen dunklen
+     Slate-Ton umgestellt — identischer Zahlenwert wie --secondary/--muted
+     „Slate 20%" weiter unten, also kein neuer Farbwert im System. Jetzt
+     ≈5,16:1. Gilt auch für aktive Nav (dieselben Tokens). */
+  --primary: 88 77% 40%;
+  --primary-foreground: 216 23% 20%; /* #27313F statt Weiß — dunkler Slate-Ton */
+
+  /* --link bleibt = --primary: als Text auf dunklem Grund bereits AA-konform
+     (≈6,6:1 auf --background, ≈5,9:1 auf --card). Anders als im Light Mode
+     braucht Grün-als-Text auf dunklem Grund KEINE Abdunklung. */
+  --link: var(--primary); /* #6BB517 */
+
+  --secondary: 216 23% 20%; /* Slate 20% */
+  --secondary-foreground: 0 0% 95%;
+
+  --muted: 216 23% 20%; /* Slate 20% */
+  --muted-foreground: 0 0% 65%; /* bereits AA-konform (≈6,9:1 auf --background,
+     ≈5,4:1 auf --muted) — unverändert gelassen */
+
+  --accent: 75 60% 45%; /* Green Light 45% */
+  --accent-foreground: 216 23% 12%;
+
+  --destructive: 342 67% 50%; /* Pink 50% — Flächenfarbe, unverändert: weißer
+     Text darauf misst bereits ≈4,86:1 (AA-konform), daher hier kein Fix nötig */
+  --destructive-foreground: 0 0% 100%;
+
+  /* AA-Fix: --destructive-text im Dark Mode HELLER als die Fläche — bei
+     dunklem Hintergrund braucht Text mehr statt weniger Lightness (umgekehrte
+     Richtung wie im Light Mode!). Dieselbe Light-Mode-Abdunklung (50%) käme
+     hier nur auf ≈3,48:1. Bei 64% L: ≈5,2:1 auf --background, ≈4,6:1 auf --card. */
+  --destructive-text: 342 67% 64%; /* #E1668B */
+
+  --warning: 38 84% 50%;
+  --warning-foreground: 216 23% 12%;
+
+  /* = Primary, als Referenz (s. :root) — Badge variant="success" profitiert
+     damit automatisch vom selben Foreground-Fix wie --primary/aktive Nav. */
+  --success: var(--primary);
+  --success-foreground: var(--primary-foreground);
+
+  --border: 216 23% 25%; /* Slate 25% */
+  --input: 216 23% 25%;
+  --ring: 88 77% 45%;
+
+  /* Dataviz-Serienfarben, Dunkel-Variante — EIGENSTÄNDIG gewählt (nicht aus
+     den Hell-Werten abgeleitet), s. Kommentar im `:root`-Block oben. */
+  --viz-serie-1: #5c9e14;
+  --viz-serie-2: #3e87c7;
+  --viz-serie-3: #c4762f;
+  --viz-serie-4: #8f6fc0;
+  --viz-serie-fallback: #9a9a94;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-link: hsl(var(--link));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-text: hsl(var(--destructive-text));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans:
+    'Roboto', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans text-sm;
+  }
+
+  /* Sichtbarer Fokus-Ring als Baseline für JEDES interaktive Element —
+     auch für noch nicht auf `shared/ui/*` migriertes Markup
+     (`.claude/rules/frontend-react.md`: „Focus-Ring sichtbar"). Die
+     `shared/ui/*`-Primitives setzen zusätzlich einen eigenen
+     `focus-visible:ring-*`-Utility-Ring auf sich selbst — beide Regeln
+     zusammen sind idempotent (letztere gewinnt dank Kaskade/Spezifität). */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Baseline-Optik für `<dl>`-Blöcke, die (noch) nicht Teil der restylten
+     `DetailView`/`PiiMaskedField`-Primitives sind (z. B. `HealthStatusPanel`,
+     Phase-4c-Feinschliff-Scope bewusst auf App-Shell + Stammdaten-Shared-
+     Primitives begrenzt, siehe Abschlussbericht „offene Punkte"). */
+  dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  /* AA-Fix Runde 2: --success/--destructive sind Flächenfarben (kalibriert
+     für weißen Text darauf) — als reine Textfarbe auf --background/--card
+     verwendet, ist die dedizierte Text-Variante korrekt: --link bzw.
+     --destructive-text. */
+  [data-tone='ok'] {
+    color: hsl(var(--link));
+  }
+
+  [data-tone='error'] {
+    color: hsl(var(--destructive-text));
+  }
+
+  [data-tone='pending'] {
+    color: hsl(var(--muted-foreground));
+  }
+}

@@ -1,0 +1,32 @@
+-- V0012__measurement_taegliche_abdeckung.down.sql
+--
+-- Rollt `measurement.taegliche_abdeckung` (DE-02-Rollup, ADR-0005 §27,
+-- TS-2) vollstaendig zurueck. Ausschliesslich von V0012 angelegtes Objekt:
+-- die Tabelle selbst inkl. ihres CHECK-Constraints (anzahl >= 0) und ihres
+-- zusammengesetzten Primaerschluessels (messkanal_key, tag) -- beide werden
+-- durch ein einziges `DROP TABLE` automatisch mit entfernt (analog
+-- V0008-Down-Datei-Reasoning). KEIN CASCADE noetig: keine andere Tabelle/
+-- View/Funktion referenziert measurement.taegliche_abdeckung (kein
+-- Fremdschluessel zeigt AUF diese Tabelle; sie selbst referenziert
+-- energy.messkanal.kanal_key/measurement.messwert.messkanal_key nur
+-- LOGISCH, ohne FK -- Konvention V0002).
+--
+-- V0012 hat KEINE Grants und KEINE Extension/Rolle angelegt (D-CRON,
+-- s. Up-Datei-Kopf: die pg_cron-Job-Registrierung ist ein kommentierter
+-- Vorschlag, keine ausgefuehrte Anweisung) -- dieser Rollback hat daher
+-- nichts ausserhalb der Tabelle selbst zurueckzunehmen.
+--
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): Greenfield-Migration ohne Produktivdaten ->
+-- .claude/rules/database-migrations.md verlangt HIER keinen gesonderten
+-- Backup-Nachweis. Wurde diese Migration bereits auf einer Instanz MIT
+-- echten (auch synthetischen Pilot-)Rollup-Daten angewendet, ist vor
+-- diesem Rollback ein Backup zu ziehen und die User-Freigabe einzuholen
+-- (devops-lead-Abstimmung, analog V0002/V0003/V0008/V0010/V0011-Down-
+-- Dateien). Da diese Tabelle ohnehin jederzeit VOLLSTAENDIG aus
+-- measurement.messwert rekonstruierbar ist (reiner Rollup-Cache, kein
+-- Primaerdaten-Verlust), ist ein Datenverlust durch diesen Rollback fachlich
+-- folgenlos -- der formale Backup-Hinweis gilt trotzdem unveraendert nach
+-- der Regel.
+
+DROP TABLE measurement.taegliche_abdeckung;

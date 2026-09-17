@@ -1,0 +1,66 @@
+name: Nightly Security Scans
+
+# ADR-0001-projekt-skelett.md, Abschnitt 10.3 (devops-lead-Votum 1): der
+# Full-History-Secret-Scan läuft NICHT im PR-Pfad (Time-to-green, M1),
+# sondern hier nightly -- zusätzlich zum PR-Diff-Scan in ci.yml. Ergänzend:
+# vollständiger dep-audit (ohne --prod-Filter, strengerer Schwellwert als im
+# PR-Gate) für breitere Sichtbarkeit außerhalb des PR-Zeitdrucks.
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # täglich 02:17 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-security
+  cancel-in-progress: false
+
+jobs:
+  gitleaks-full-history:
+    name: gitleaks Full-History-Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (volle Historie)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: gitleaks installieren
+        uses: ./.github/actions/gitleaks-install
+      - name: "gitleaks Full-History-Scan (kein --log-opts -> komplette Historie)"
+        run: |
+          gitleaks detect --source . --no-banner --redact \
+            --report-format sarif --report-path gitleaks-report-full-history.sarif
+      - name: SARIF-Report als Artefakt sichern
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gitleaks-report-full-history
+          path: gitleaks-report-full-history.sarif
+          if-no-files-found: warn
+          retention-days: 30
+
+  dep-audit-full:
+    name: Vollständiger Dependency-Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: "pnpm audit (Dev+Prod, Schwellwert: moderate -- strenger als PR-Gate)"
+        run: |
+          # Nightly deckt bewusst mehr ab als das PR-Gate (ci.yml: --prod,
+          # --audit-level high) -- Dev-Dependencies eingeschlossen, tieferer
+          # Schwellwert, damit Findings nicht erst bei "high" sichtbar
+          # werden. Alternative (Phase-5-Entscheidung security-auditor):
+          # osv-scanner (Apache-2.0).
+          pnpm audit --audit-level moderate

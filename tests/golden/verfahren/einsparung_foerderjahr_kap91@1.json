@@ -1,0 +1,81 @@
+{
+  "verfahren": "einsparung_foerderjahr_kap91",
+  "version": 1,
+  "quelle": "ADR-0007 B13.6 — kanonische Golden Vectors (savings-engineer, 2026-08-20). Spiegel in analytics.verfahren_version.golden_vectors (V0024-Seed, art=einsparaggregation); Synchronhaltung ist Prozessdisziplin (Muster ADR-0006 D-GV). Dateiname folgt der Verfahrens-CODE-Konvention aus V0024/witterung_gtz_vdi3807@1.json — NICHT der Verfahrens-ART (Abweichung von der wörtlichen Auftragsbenennung 'einsparaggregation@1.json', s. finale Antwort dieses Arbeitspakets).",
+  "toleranz_kwh": 0.001,
+  "vektoren": [
+    {
+      "vektor": "GV1",
+      "beschreibung": "Normalfall: alle Monate belastbar.",
+      "ebene": "endkunde_traeger_jahr",
+      "monatsmenge": ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01"],
+      "monate_delta_kwh": { "2027-01-01": 200, "2027-02-01": 150, "2027-03-01": 20, "2027-04-01": 20 },
+      "monate_qualitaet": { "2027-01-01": "belastbar", "2027-02-01": "belastbar", "2027-03-01": "belastbar", "2027-04-01": "belastbar" },
+      "floor_prozent": 75,
+      "erwartete_einsparung_kwh": 390.0,
+      "erwartete_abdeckung_pct": 100,
+      "erwarteter_status": "belastbar"
+    },
+    {
+      "vektor": "GV2",
+      "beschreibung": "Mehrverbrauch im Februar (R=1100, A=1300 ⇒ Δ=-200) — Regressionsschutz gegen Kappung (B13.2).",
+      "ebene": "endkunde_traeger_jahr",
+      "monatsmenge": ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01"],
+      "monate_delta_kwh": { "2027-01-01": 200, "2027-02-01": -200, "2027-03-01": 20, "2027-04-01": 20 },
+      "monate_qualitaet": { "2027-01-01": "belastbar", "2027-02-01": "belastbar", "2027-03-01": "belastbar", "2027-04-01": "belastbar" },
+      "floor_prozent": 75,
+      "erwartete_einsparung_kwh": 40.0,
+      "erwartete_abdeckung_pct": 100,
+      "erwarteter_status": "belastbar",
+      "regressionsschutz_hinweis": "Eine Kappung max(Delta,0) ergaebe faelschlich 240,000 (200-0+20+20) statt 40,000 (200-200+20+20)."
+    },
+    {
+      "vektor": "GV3",
+      "beschreibung": "Luecke an der Floor-Grenze: Februar nicht_ausweisbar, 3/4=75% Abdeckung.",
+      "ebene": "endkunde_traeger_jahr",
+      "monatsmenge": ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01"],
+      "monate_delta_kwh": { "2027-01-01": 200, "2027-03-01": 20, "2027-04-01": 20 },
+      "monate_qualitaet": { "2027-01-01": "belastbar", "2027-03-01": "belastbar", "2027-04-01": "belastbar" },
+      "ausgeschlossene_monate": ["2027-02-01"],
+      "floor_prozent": 75,
+      "erwartete_einsparung_kwh": 240.0,
+      "erwartete_abdeckung_pct": 75,
+      "erwarteter_status": "eingeschraenkt"
+    },
+    {
+      "vektor": "GV4",
+      "beschreibung": "Floor unterschritten: Februar+Maerz nicht_ausweisbar, 2/4=50% Abdeckung.",
+      "ebene": "endkunde_traeger_jahr",
+      "monatsmenge": ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01"],
+      "monate_delta_kwh": { "2027-01-01": 200, "2027-04-01": 20 },
+      "monate_qualitaet": { "2027-01-01": "belastbar", "2027-04-01": "belastbar" },
+      "ausgeschlossene_monate": ["2027-02-01", "2027-03-01"],
+      "floor_prozent": 75,
+      "erwartete_einsparung_kwh": null,
+      "erwartete_abdeckung_pct": 50,
+      "erwarteter_status": "nicht_nachweisbar",
+      "regressionsschutz_hinweis": "E bleibt NULL, NICHT 220,000, obwohl aus den verbleibenden Monaten arithmetisch berechenbar (B13.3)."
+    },
+    {
+      "vektor": "GV5",
+      "beschreibung": "Energietraeger-Substitution erkannt — unabhaengig von der Monats-Datenqualitaet. KEIN Testfall fuer einsparungJahr() selbst (s. Spec-Kommentar): Substitution ist eine App-/Service-Entscheidung VOR dem Rechenkern (B13.4), der Kern kennt keine Substitution.",
+      "ebene": "endkunde_traeger_jahr",
+      "monatsmenge": ["2027-01-01", "2027-02-01", "2027-03-01", "2027-04-01"],
+      "monate_delta_kwh": { "2027-01-01": 200, "2027-02-01": 150, "2027-03-01": 20, "2027-04-01": 20 },
+      "monate_qualitaet": { "2027-01-01": "belastbar", "2027-02-01": "belastbar", "2027-03-01": "belastbar", "2027-04-01": "belastbar" },
+      "status": "ausgeschlossen",
+      "ausschluss_grund_code": "energietraeger_substitution_v1_nicht_unterstuetzt",
+      "erwartete_einsparung_kwh": null,
+      "hinweis": "Endkunde bleibt in der Export-Liste sichtbar (DE-02), kein Zahlenwert — unabhaengig davon, dass alle Monate belastbar waeren (B13.4/B14)."
+    },
+    {
+      "vektor": "GV6",
+      "beschreibung": "Portfolio-Verrechnung ueber drei Endkunden — Regressionsschutz gegen Kappung auf Portfolioebene (Kap. 9.1 Satz 3).",
+      "ebene": "portfolio_jahr",
+      "endkunden_einsparung_kwh": { "A": 390.0, "B": -150.0, "C": 40.0 },
+      "erwartete_n_t": 3,
+      "erwartete_portfolio_einsparung_kwh": 280.0,
+      "regressionsschutz_hinweis": "Eine Kappung von B auf 0 ergaebe faelschlich 430,000 (390+0+40) statt 280,000 (390-150+40) — widerspricht Kap. 9.1 Satz 3."
+    }
+  ]
+}

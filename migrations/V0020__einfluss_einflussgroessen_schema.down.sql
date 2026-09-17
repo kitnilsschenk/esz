@@ -1,0 +1,34 @@
+-- V0020__einfluss_einflussgroessen_schema.down.sql
+--
+-- Rollt Schema `einfluss` (ADR-0006 D8/B8, Einflussgroessen) vollstaendig
+-- zurueck. Greenfield-Migration (kein Bestandsschema, ADR-0006 Status
+-- "proposed" -- Design-Entwurf) -- KEINE Produktivdaten, `DROP SCHEMA
+-- einfluss CASCADE` ist hier vertretbar. Alle Objekte dieses Schemas wurden
+-- ausschliesslich von V0020 angelegt; keine Grants ausserhalb des Schemas
+-- (anders als V0010/energy.zaehler) -- kein separater REVOKE-Schritt noetig.
+
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): Greenfield-Migration ohne Produktivdaten ->
+-- .claude/rules/database-migrations.md verlangt HIER keinen gesonderten
+-- Backup-Nachweis. Wurde diese Migration bereits mit echten (auch
+-- synthetischen Pilot-)Daten befuellt -- INSBESONDERE relevant hier, weil
+-- `einfluss.intervall` Klartext-PII traegt (D8.1) --, ist vor diesem
+-- Rollback zwingend ein Backup zu ziehen und die User-Freigabe einzuholen
+-- (devops-lead-Abstimmung, analog V0002/V0003/V0008/V0010).
+DROP SCHEMA einfluss CASCADE;
+
+-- =====================================================================
+-- Rolle bewusst NICHT gedroppt (dokumentierter Teil-No-Op,
+-- V0003/V0010-Praezedenzfall)
+-- =====================================================================
+-- (a) Rollen sind CLUSTER-, nicht datenbankweit -- dieser Rollback kann aus
+--     der aktuellen Datenbank heraus nicht sicher pruefen, ob edms_einfluss
+--     in einer ANDEREN Datenbank desselben Clusters noch Grantee ist.
+-- (b) Nach dem Schema-Drop besitzt edms_einfluss keinerlei Privilegien mehr
+--     auf ein konkretes Objekt -- die verbleibende Rollen-Huelle ist
+--     inert/harmlos.
+--
+-- Wer diese Migration auf einer isolierten Dev-/Test-Instanz wirklich
+-- vollstaendig zurueckrollen will (inkl. Rolle), tut das bewusst und manuell
+-- ausserhalb des Runners -- NICHT ueber diese Datei:
+--   DROP ROLE IF EXISTS edms_einfluss;

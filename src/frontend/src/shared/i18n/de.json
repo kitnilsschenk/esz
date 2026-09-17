@@ -1,0 +1,2681 @@
+{
+  "app": {
+    "title": "EDMS",
+    "titelMitMarke": "EDMS — KIT Consulting",
+    "skipLink": "Zum Hauptinhalt springen",
+    "marke": {
+      "firmenname": "KIT Consulting GmbH",
+      "urheberHinweis": "Kompetenzzentrum für Energie- und Gebäudeeffizienz"
+    },
+    "theme": {
+      "zuDunkel": "Zu dunklem Farbschema wechseln",
+      "zuHell": "Zu hellem Farbschema wechseln"
+    },
+    "brotkrumen": {
+      "ariaLabel": "Brotkrumenpfad"
+    }
+  },
+  "dashboard": {
+    "pageTitle": "Arbeitsplatz",
+    "kachel": {
+      "ausfall": {
+        "titel": "Zähler mit Datenausfall",
+        "beschreibung": "Zähler, die keine Daten mehr liefern, und dokumentierte Ausfälle, die noch offen sind.",
+        "ctaLabel": "Störungen ansehen"
+      },
+      "luecken": {
+        "titel": "Endkunden mit Stammdaten-Lücken",
+        "beschreibung": "Kunden, bei denen etwas fehlt, um rechnen zu können: Messkonzept, Zähler/Messkanal oder Einwilligung.",
+        "ctaLabel": "Lücken beheben"
+      },
+      "unverortet": {
+        "titel": "Unverortete Zähler",
+        "backendHinweis": "Die Gesamtzahl steht noch nicht zur Verfügung. Nicht verortete Zähler finden Sie heute schon über die Gebäude- und Raumstruktur.",
+        "ctaLabel": "Zur Gebäude- & Raumstruktur"
+      },
+      "baseline": {
+        "titel": "Verbrauch & Einsparung",
+        "beschreibung": "Monatliche Berechnungen je Endkunde: witterungsbereinigte Referenz aus der Baseline gegen den tatsächlichen Verbrauch.",
+        "ctaLabel": "Berechnungen ansehen"
+      },
+      "bafaExport": {
+        "titel": "BAFA-Export",
+        "beschreibung": "Förderjahr prüfen, Einsparung zusammenfassen, Nachweis-Dateien erzeugen und die Einreichung vermerken.",
+        "ctaLabel": "Zu den Förderjahren"
+      },
+      "nutzerinfo": {
+        "titel": "Monatsinformation",
+        "beschreibungNichtErzeugt": "Für diesen Monat wurde noch keine Information erzeugt. Der Monat ist damit offen.",
+        "beschreibungOffen": "So viele Informationen sind erzeugt, aber noch nicht zugestellt. Erst die Zustellung erfüllt die Auflage.",
+        "beschreibungDurch": "Alle erzeugten Informationen dieses Monats sind zugestellt.",
+        "ctaLabel": "Zur Nutzerinformation"
+      }
+    },
+    "schnellzugriffe": {
+      "titel": "Schnellzugriffe",
+      "neuerEndkunde": "Neuer Endkunde",
+      "neuerZaehler": "Neuer Zähler",
+      "zaehlerVerorten": "Zähler verorten"
+    },
+    "platzhalterBadge": "bald"
+  },
+  "health": {
+    "title": "Systemstatus",
+    "refresh": "Aktualisieren",
+    "ampel": {
+      "ariaLabelPraefix": "Systemstatus:"
+    },
+    "liveness": {
+      "label": "Erreichbarkeit",
+      "loading": "Prüfe Erreichbarkeit …",
+      "ok": "System erreichbar",
+      "error": "System nicht erreichbar"
+    },
+    "readiness": {
+      "label": "Bereitschaft",
+      "loading": "Prüfe Bereitschaft …",
+      "ready": "Datenbank bereit",
+      "notReady": "Datenbank nicht bereit",
+      "error": "Bereitschaft konnte nicht ermittelt werden"
+    }
+  },
+  "common": {
+    "errorGeneric": "Ein unerwarteter Fehler ist aufgetreten. Bitte später erneut versuchen.",
+    "routeLoading": "Seite wird geladen …",
+    "notFound": "Seite nicht gefunden."
+  },
+  "auth": {
+    "gate": {
+      "checking": "Anmeldestatus wird geprüft …"
+    },
+    "login": {
+      "title": "Anmeldung erforderlich",
+      "description": "Bitte melden Sie sich an, um das EDMS zu nutzen.",
+      "action": "Anmelden"
+    },
+    "status": {
+      "loggedInAsPrefix": "Angemeldet als",
+      "sessionLoading": "Sitzung wird geladen …",
+      "sessionError": "Sitzungsinformationen konnten nicht geladen werden.",
+      "logoutAction": "Abmelden",
+      "loggingOut": "Abmeldung läuft …"
+    },
+    "roles": {
+      "betrieb": "Betrieb",
+      "compliance-auditor": "Auditor (nur lesend)",
+      "admin": "Administrator",
+      "geraete-support": "Geräte-Support"
+    }
+  },
+  "nav": {
+    "ariaLabel": "Hauptnavigation",
+    "health": "Systemstatus",
+    "tooltipLabelPraefix": "Erklärung zu",
+    "unterpunkteAriaPraefix": "Unterpunkte von",
+    "gruppen": {
+      "stammdaten": "Stammdaten",
+      "messdaten": "Messdaten",
+      "auswertung": "Auswertung",
+      "nachweis": "Nachweis",
+      "system": "System"
+    },
+    "tooltips": {
+      "systemgrenze": "Die fachliche Bilanzgrenze für die Einsparberechnung — das WOFÜR. Nicht zu verwechseln mit „Gebäude & Räume\", dem WO.",
+      "gebaeudeUndRaeume": "Die räumliche Struktur, an der Zähler physisch hängen — das WO. Nicht zu verwechseln mit „Systemgrenzen\", dem fachlichen WOFÜR."
+    },
+    "stammdaten": {
+      "endkunden": "Endkunden",
+      "systeme": "Systeme",
+      "systemgrenzen": "Systemgrenzen",
+      "zaehler": "Zähler",
+      "zaehlerMesskanaele": "Zähler & Messkanäle",
+      "nutzungsverhaeltnisse": "Nutzungsverhältnisse",
+      "anschlussnutzer": "Anschlussnutzer",
+      "monitoring": "Vollständigkeit",
+      "datenqualitaet": "Vollständigkeit & Störungen",
+      "messdatenAufnahme": "Datenaufnahme",
+      "standorte": "Standorte",
+      "gebaeudeUndRaeume": "Gebäude & Räume",
+      "vertraegeUndNutzung": "Verträge & Nutzung"
+    },
+    "nachweis": {
+      "baselineEinsparung": "Verbrauch & Einsparung",
+      "foerderjahre": "Förderjahre",
+      "einsparlaeufe": "Einspar-Läufe"
+    },
+    "arbeitsplatz": "Arbeitsplatz",
+    "nutzerinfo": {
+      "laeufe": "Monatsinformation"
+    }
+  },
+  "consent": {
+    "status": {
+      "erteilt": "Einwilligung liegt vor",
+      "keine": "Keine Einwilligung",
+      "giltVertraglich": "Gilt über den Vertrag",
+      "widersprochen": "Widersprochen"
+    },
+    "rechtsgrundlage": {
+      "einwilligung_art6_1a": "Einwilligung (Art. 6 Abs. 1 lit. a DSGVO)",
+      "vertrag_art6_1b": "Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)"
+    },
+    "erfassungsweg": {
+      "digital_opt_in": "Digitale Zustimmung",
+      "vertrag_schriftlich": "Schriftlich erteilt",
+      "uebernahme_altbestand": "Aus Altbestand übernommen"
+    },
+    "stand": {
+      "sectionTitle": "Einwilligungen und Rechtsgrundlagen",
+      "einfuehrung": "Jeder Zweck steht einzeln. Wo eine Einwilligung die Grundlage ist, wird sie einzeln erteilt und kann einzeln widerrufen werden — eine Zustimmung zu allem auf einmal gibt es bewusst nicht. Zwecke, die für die Leistung erforderlich sind, beruhen auf dem Vertrag und stehen hier zur Information: Dort ist nichts zu erteilen. Aufgeführt sind auch Zwecke ohne Einwilligung — dass zu etwas nie zugestimmt wurde, gehört zu einer Auskunft dazu.",
+      "verweigerbar": "Freiwillig. Ablehnung und Widerruf sind jederzeit möglich, ohne dass die Leistung entfällt.",
+      "seitFassung": "Erteilt am {seit} auf Grundlage der Fassung {fassung}.",
+      "erklaertAmLabel": "Erklärt am",
+      "erklaertAmHinweis": "Der Tag, an dem die Person unterschrieben oder erklärt hat — nicht der heutige. Er wird bewusst nicht vorbelegt.",
+      "quelleRefLabel": "Fundstelle",
+      "quelleRefHinweis": "Vertrags-, Akten- oder Ablagekennung des Dokuments. Ohne sie ist später nicht auffindbar, worauf sich der Eintrag stützt. Keine Namen eintragen.",
+      "rechtsgrundlageLabel": "Rechtsgrundlage",
+      "begruendungToggle": "Ausführliche Begründung",
+      "erteilenAction": "Einwilligung erfassen",
+      "widerrufenAction": "Widerrufen",
+      "erteiltErfolg": "Einwilligung erfasst — wirksam ab dem angegebenen Erklärungstag, nicht ab heute. Die Fassung, auf deren Grundlage sie erteilt wurde, ist festgehalten.",
+      "widerrufenErfolg": "Widerruf vermerkt. Die Einwilligung endet ab diesem Zeitpunkt — was bis dahin verarbeitet wurde, bleibt rechtmäßig und wird nicht gelöscht.",
+      "verlaufToggle": "Verlauf anzeigen ({anzahl})",
+      "fassungKurz": "Fassung",
+      "widerrufenAm": "widerrufen am {am}",
+      "erforderlich": "Für die Leistung erforderlich. Beruht nicht auf einer Einwilligung — hier ist nichts zu erteilen oder zu widerrufen.",
+      "widerspruchMoeglich": "Diese Leistung läuft, bis ihr widersprochen wird (TB-06). Erfassen Sie die Abwahl mit dem Datum, an dem sie erklärt wurde, und der Fundstelle des Schreibens.",
+      "widerspruchWirksamHinweis": "Es liegt ein wirksamer Widerspruch vor. Eine Rücknahme lässt die Verarbeitung wieder anlaufen und ist ein eigener Vorgang mit eigenem Erklärungsdatum und eigener Fundstelle — der ursprüngliche Widerspruch bleibt als Nachweis bestehen.",
+      "widersprochenSeit": "Widersprochen seit {seit}",
+      "widersprechenAction": "Widerspruch erfassen",
+      "widerspruchZuruecknehmenAction": "Widerspruch zurücknehmen",
+      "widersprochenErfolg": "Der Widerspruch ist erfasst. Er wirkt ab dem eingetragenen Erklärungsdatum, nicht ab heute.",
+      "widerspruchZurueckgenommenErfolg": "Die Rücknahme ist erfasst. Die Verarbeitung läuft ab dem eingetragenen Datum wieder; der Widerspruch bleibt als Nachweis über den Zeitraum bestehen, in dem widersprochen war.",
+      "widerspruchVerlaufToggle": "Widersprüche anzeigen ({anzahl})",
+      "widerspruchZurueckgenommenAm": "zurückgenommen am {am}",
+      "widerspruchVertraglichHinweis": "Diese Verarbeitung ist vertraglich geschuldet — ein Widerspruch betrifft die Leistung selbst, nicht eine Zusatzfunktion. Er ist erfassbar; prüfen Sie vorher, ob die Erklärung wirklich so gemeint war."
+    }
+  },
+  "stammdaten": {
+    "common": {
+      "einschraenkungAufhebung": {
+        "schritt1Titel": "Schritt 1 — Unterrichtung dokumentieren",
+        "schritt1Beschreibung": "Vor der Aufhebung ist die betroffene Person zu unterrichten (Art. 18 Abs. 3 DSGVO). Halten Sie hier fest, auf welchem Weg das geschehen ist.",
+        "schritt2Titel": "Schritt 2 — Einschränkung aufheben",
+        "schritt2Beschreibung": "Die Aufhebung ist erst möglich, nachdem die Unterrichtung zu genau dieser Einschränkung dokumentiert wurde.",
+        "kanalLabel": "Weg der Unterrichtung",
+        "kanalPlatzhalter": "Bitte Weg wählen",
+        "kanaele": {
+          "postalisch": "Postalisch",
+          "elektronisch": "Elektronisch",
+          "telefonisch": "Telefonisch",
+          "persoenlich": "Persönlich"
+        },
+        "unterrichtenAction": "Unterrichtung dokumentieren",
+        "entsperrenAction": "Einschränkung aufheben",
+        "unterrichtungErfolg": "Die Unterrichtung wurde dokumentiert.",
+        "aufhebungErfolg": "Die Verarbeitungseinschränkung wurde aufgehoben.",
+        "dialogTitel": "Einschränkung aufheben",
+        "dialogBeschreibung": "Die Verarbeitung wird wieder freigegeben. Der dokumentierte Einschränkungsgrund und der Sperrzeitpunkt werden dabei entfernt — nachvollziehbar bleibt der Vorgang über das Audit-Protokoll."
+      },
+      "neuerhebung": {
+      "label": "Messdaten-Erhebung während der Einschränkung",
+      "platzhalter": "Bitte entscheiden",
+      "hinweis": "Art. 18 Abs. 2 nimmt nur die Speicherung aus der Einschränkung aus. Bei diesem Grund steht die Rechtmäßigkeit des Erhebens selbst in Frage — die Entscheidung ist ausdrücklich zu treffen und wird protokolliert.",
+      "fortsetzen": "Weiter erheben (Messung läuft, Auswertung ruht)",
+      "stoppen": "Erhebung stoppen (Uplinks werden verworfen, Lücke ist nicht nachfüllbar)",
+      "dialogFortsetzen": "Erhebung: läuft weiter",
+      "dialogStoppen": "Erhebung: wird gestoppt"
+    },
+    "einschraenkungGrund": {
+        "feldLabel": "Grund der Einschränkung",
+        "gesperrtSeit": "Eingeschränkt seit",
+        "auswahlLabel": "Grund der Einschränkung (Art. 18 Abs. 1 DSGVO)",
+        "platzhalter": "Bitte Grund wählen",
+        "dialogGrund": "Gewählter Grund:",
+        "optionen": {
+          "art18_1a": "Richtigkeit der Daten wird bestritten (Abs. 1 lit. a)",
+          "art18_1b": "Verarbeitung ist unrechtmäßig, Löschung wird abgelehnt (Abs. 1 lit. b)",
+          "art18_1c": "Daten werden zur Rechtsverteidigung der betroffenen Person weiter benötigt (Abs. 1 lit. c)",
+          "art18_1d": "Widerspruch nach Art. 21 eingelegt, Prüfung läuft (Abs. 1 lit. d)"
+        }
+      },
+      "laedt": "Daten werden geladen …",
+      "fehler": "Daten konnten nicht geladen werden.",
+      "fehlerAllgemein": "Ein unerwarteter Fehler ist aufgetreten. Bitte später erneut versuchen.",
+      "erfolg": {
+        "gespeichert": "Änderungen wurden gespeichert.",
+        "angelegt": "Der Eintrag wurde angelegt.",
+        "stillgelegt": "Der Eintrag wurde stillgelegt.",
+        "geloescht": "Der Eintrag wurde gelöscht.",
+        "gesperrt": "Der Endkunde wurde gesperrt (Verarbeitung eingeschränkt).",
+        "beantragt": "Der Antrag wurde gestellt und wartet auf die Freigabe durch eine zweite Person.",
+        "beendet": "Das Nutzungsverhältnis wurde beendet.",
+        "zugeordnet": "Die Zuordnung wurde gespeichert."
+      },
+      "aktion": "Aktion",
+      "ja": "Ja",
+      "nein": "Nein",
+      "abbrechen": "Abbrechen",
+      "schliessen": "Schließen",
+      "weitereLaden": "Weitere laden",
+      "keineAngabe": "keine Angabe",
+      "relativeZeit": {
+        "geradeEben": "gerade eben",
+        "vorPraefix": "vor",
+        "minutenSuffix": "Min.",
+        "stundenSuffix": "Std.",
+        "tagenSuffix": "Tagen"
+      },
+      "form": {
+        "pflichtfeld": "Pflichtfeld",
+        "referenzListeGekuerzt": "Es werden nur die ersten 100 Einträge angeboten — eine Suche über alle Einträge ist serverseitig noch nicht verfügbar. Fehlt der gesuchte Eintrag, kann er hier derzeit nicht ausgewählt werden."
+      },
+      "pii": {
+        "maskiertText": "•••",
+        "maskiertHinweis": "Für diese Rolle bzw. diesen Status maskiert"
+      },
+      "enums": {
+        "energietraeger": {
+          "strom": "Strom",
+          "waerme": "Wärme",
+          "kaelte": "Kälte",
+          "gas": "Gas",
+          "oel": "Öl",
+          "biomasse": "Biomasse"
+        },
+        "betriebsStatus": {
+          "aktiv": "aktiv",
+          "stillgelegt": "stillgelegt"
+        },
+        "messgroesseArt": {
+          "kumulativ_zaehlerstand": "kumulativer Zählerstand",
+          "intervall_verbrauch": "Intervallverbrauch"
+        },
+        "datenklasse": {
+          "abrechnungsminimum": "Abrechnungsminimum",
+          "detailverbrauch": "Detailverbrauch"
+        },
+        "nutzungsRolle": {
+          "mieter": "Mieter",
+          "eigentuemer_selbstnutzer": "Eigentümer (Selbstnutzer)",
+          "gewerbe_nutzer": "Gewerbenutzer",
+          "sonstige": "Sonstige"
+        },
+        "verarbeitungsStatus": {
+          "aktiv": "aktiv",
+          "gesperrt": "gesperrt",
+          "geloescht": "gelöscht"
+        },
+        "messkonzeptTyp": {
+          "vereinfacht": "Vereinfacht",
+          "standard": "Standard",
+          "alternativ": "Alternativ"
+        },
+        "lueckenTyp": {
+          "kein_messkonzept": "Kein Messkonzept",
+          "kein_zaehler": "Kein Zähler",
+          "kein_messkanal": "Kein Messkanal",
+          "kein_aktiver_consent": "Keine aktive Einwilligung",
+          "keine_mindestaufloesungs_zusage": "Keine Mindestauflösungs-Zusage"
+        },
+        "vollstaendigkeitEbene": {
+          "endkunde": "Endkunde",
+          "system": "System",
+          "zaehler": "Zähler"
+        },
+        "standortTyp": {
+          "liegenschaft": "Liegenschaft",
+          "gebaeude": "Gebäude",
+          "bauteil": "Bauteil",
+          "etage": "Etage",
+          "einheit": "Einheit",
+          "raum": "Raum"
+        },
+        "aufloesung": {
+          "stunde": "Stunde",
+          "tag": "Tag",
+          "monat": "Monat"
+        },
+        "messwertQualitaet": {
+          "gemessen": "gemessen",
+          "geschaetzt": "geschätzt",
+          "korrigiert": "korrigiert",
+          "ersatzwert": "Ersatzwert"
+        },
+        "messwertHerkunft": {
+          "ingest_live": "Live-Erfassung",
+          "backfill": "Backfill",
+          "manuell": "Manuell",
+          "import_altsystem": "Altsystem-Import"
+        },
+        "qualitaetsStufe": {
+          "belastbar": "belastbar",
+          "eingeschraenkt": "eingeschränkt",
+          "nicht_ausweisbar": "nicht ausweisbar"
+        },
+        "ausloeser": {
+          "manuell": "manuell",
+          "job": "automatisch (Job)",
+          "nachlauf_korrektur": "Nachlauf-Korrektur"
+        },
+        "einflussBetroffenerTyp": {
+          "endkunde": "Endkunde",
+          "anschlussnutzer": "Anschlussnutzer"
+        },
+        "einflussQuelleTyp": {
+          "endkunde": "Endkunde",
+          "anschlussnutzer": "Anschlussnutzer",
+          "betriebsteam": "Betriebs-Team",
+          "vor_ort": "Vor Ort"
+        },
+        "einflussRechtsgrundlage": {
+          "art6_1b": "Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)",
+          "art6_1f": "Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse)"
+        },
+        "einflussAnlassCode": {
+          "ersterfassung": "Ersterfassung",
+          "turnusaktualisierung": "Turnusaktualisierung",
+          "korrektur": "Korrektur",
+          "systemgrenzenaenderung": "Systemgrenzenänderung",
+          "meldung_aenderung": "Meldung/Änderung",
+          "sonstige": "Sonstige"
+        }
+      },
+      "brotkrume": {
+        "neu": "Neu",
+        "bearbeiten": "Bearbeiten",
+        "berechnungen": "Berechnungsläufe",
+        "messkonzept": "Messkonzept",
+        "neueVersion": "Neue Version",
+        "versionPraefix": "Version",
+        "gebaeudeUndRaeume": "Gebäude & Räume",
+        "einflussgroessen": "Einflussgrößen",
+        "erfassen": "Erfassen",
+        "korrigieren": "Korrigieren",
+        "neuerMesskanal": "Neuer Messkanal",
+        "berechnungAnlegen": "Neue Berechnung"
+      },
+      "filter": {
+        "label": "Liste filtern",
+        "platzhalter": "Name oder Kennung …",
+        "hinweis": "Filtert die bereits geladenen Einträge — sucht nicht im gesamten Bestand. Über „Weitere laden\" holen Sie mehr Einträge herein.",
+        "leer": "Kein geladener Eintrag passt zum Filter. Über „Weitere laden\" holen Sie weitere Einträge herein.",
+        "ergebnisPraefix": "Gefiltert:",
+        "ergebnisVon": "von",
+        "ergebnisSuffix": "Einträgen"
+      }
+    },
+    "endkunde": {
+      "listPage": {
+        "title": "Endkunden",
+        "createAction": "Endkunde anlegen"
+      },
+      "tabelle": {
+        "caption": "Liste der Endkunden",
+        "name": "Endkunde",
+        "id": "Kennung",
+        "verarbeitungsStatus": "Verarbeitungsstatus",
+        "consentStatus": "Einwilligungsstatus",
+        "vonWissAuswertungAusgenommen": "Von wiss. Auswertung ausgenommen",
+        "createdAt": "Angelegt am",
+        "leer": "Noch kein Endkunde angelegt — legen Sie den ersten Endkunden an, um mit der Erfassung zu beginnen.",
+        "detailsAnzeigen": "Details anzeigen",
+        "endkundengruppe": "Branche"
+      },
+      "status": {
+        "verarbeitung": {
+          "aktiv": "aktiv",
+          "gesperrt": "gesperrt",
+          "geloescht": "gelöscht"
+        },
+        "consent": {
+          "aktiv": "aktiv",
+          "fehlt": "fehlt",
+          "widerrufen": "widerrufen"
+        }
+      },
+      "detailPage": {
+        "title": "Endkunde-Detail",
+        "backAction": "Zurück zur Liste"
+      },
+      "detail": {
+        "id": "ID",
+        "verarbeitungsStatus": "Verarbeitungsstatus",
+        "consentStatus": "Einwilligungsstatus",
+        "vonWissAuswertungAusgenommen": "Von wiss. Auswertung ausgenommen",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am",
+        "piiSectionTitle": "Personenbezogene Daten",
+        "piiName": "Name",
+        "piiAnschrift": "Anschrift",
+        "piiKontakt": "Kontakt",
+        "piiKontaktKeineAngabe": "keine Angabe",
+        "messkonzeptSectionTitle": "Messkonzept-Versionen",
+        "messkonzeptAnlegenAction": "Neue Version anlegen",
+        "standorteSectionTitle": "Standorte / Gebäudestruktur",
+        "standorteAnzeigenAction": "Standorte anzeigen",
+        "berechnungSectionTitle": "Berechnungsläufe",
+        "berechnungAnzeigenAction": "Berechnungsläufe ansehen",
+        "tabsAriaLabel": "Endkunde-Bereiche",
+        "tabUebersicht": "Übersicht",
+        "tabVerbrauch": "Verbrauch & Berichte",
+        "tabGeraete": "Geräte & Anlagen",
+        "tabEinwilligungen": "Einwilligungen",
+        "tabDatenschutz": "Datenschutz",
+        "bearbeitenAction": "Bearbeiten",
+        "sperrenAction": "Sperren",
+        "sperrenDialogTitel": "Endkunde sperren",
+        "sperrenDialogBeschreibung": "Die Verarbeitung der personenbezogenen Daten dieses Endkunden wird eingeschränkt (Art. 18 DSGVO). Die Daten bleiben vollständig erhalten, werden aber ab sofort maskiert angezeigt und nicht mehr weiterverarbeitet.",
+        "sperrenBestaetigenAction": "Sperren",
+        "sperrenErfolgreich": "Endkunde wurde erfolgreich gesperrt (Art. 18).",
+        "shreddernDialogWarnung": "Unwiderruflich: Der Verschlüsselungsschlüssel dieses Endkunden wird vernichtet. Alle personenbezogenen Klartextdaten (Name, Anschrift, Kontakt) sind danach dauerhaft NICHT mehr wiederherstellbar (Art. 17 DSGVO).",
+        "shreddernGrundLabel": "Löschgrund",
+        "shreddernGrundOptionen": {
+          "betroffenenantragArt17": "Antrag der betroffenen Person (Art. 17)",
+          "aufbewahrungAbgelaufen": "Aufbewahrungsfrist abgelaufen",
+          "sonstigeRechtsgrundlage": "Sonstige Rechtsgrundlage"
+        },
+        "shreddernBestaetigungswort": "SCHREDDERN",
+        "shreddernBestaetigungstextLabel": "Zur Bestätigung „SCHREDDERN\" eingeben",
+        "shreddernBestaetigenAction": "Endgültig schreddern",
+        "shreddernErfolgreich": "Endkunde wurde krypto-geschreddert (Art. 17) — die personenbezogenen Daten sind unwiderruflich unlesbar.",
+        "shredBeantragenAction": "Krypto-Shredding beantragen",
+        "shredBeantragenDialogTitel": "Krypto-Shredding beantragen",
+        "shredBeantragenDialogBeschreibung": "Es wird ein Antrag auf endgültige Löschung (Art. 17 DSGVO) gestellt. Der Endkunde wird dadurch NICHT sofort geschreddert — eine zweite Person muss den Antrag freigeben (Vier-Augen-Prinzip), bevor der Verschlüsselungsschlüssel vernichtet wird.",
+        "shredBeantragenBestaetigungswort": "BEANTRAGEN",
+        "shredBeantragenBestaetigungstextLabel": "Zur Bestätigung „BEANTRAGEN\" eingeben",
+        "shredBeantragenBestaetigenAction": "Antrag stellen",
+        "shredAntragOffenTitel": "Offener Shred-Antrag",
+        "shredAntragAntragsteller": "Beantragt von",
+        "shredAntragBeantragtAm": "Beantragt am",
+        "shredAntragGueltigBis": "Gültig bis",
+        "shredAntragSelbstHinweis": "Sie haben diesen Antrag gestellt; die Freigabe muss durch eine zweite Person erfolgen.",
+        "shredAntragFreigebenAction": "Freigeben",
+        "shredAntragFreigebenDialogTitel": "Shred-Antrag freigeben — Endkunde endgültig krypto-schreddern",
+        "shredAntragFreigebenDialogBeschreibung": "Bitte bestätigen Sie die Freigabe durch Eingabe des Bestätigungsworts. Dieser Schritt löst die endgültige Löschung unmittelbar aus.",
+        "shredAntragFreigebenSelbstFehler": "Sie können Ihren eigenen Antrag nicht freigeben — die Freigabe muss durch eine zweite Person erfolgen.",
+        "shredAntragAblehnenAction": "Ablehnen",
+        "shredAntragAblehnenDialogTitel": "Shred-Antrag ablehnen",
+        "shredAntragAblehnenDialogBeschreibung": "Der Antrag wird abgelehnt. Der Antragsteller kann bei Bedarf einen neuen Antrag stellen.",
+        "shredAntragAblehnungsgrundLabel": "Ablehnungsgrund",
+        "shredAntragAblehnungsgrundOptionen": {
+          "keinRechtsgrund": "Kein Rechtsgrund für die Löschung",
+          "endkundeWiderspruch": "Endkunde widerspricht der Löschung",
+          "fehlbedienung": "Fehlbedienung (Antrag irrtümlich gestellt)",
+          "sonstiges": "Sonstiges"
+        },
+        "shredAntragAblehnenBestaetigenAction": "Ablehnen",
+        "shredAntragAblehnenSelbstFehler": "Sie können Ihren eigenen Antrag nicht ablehnen — die Entscheidung muss durch eine zweite Person erfolgen.",
+        "systemeSectionTitle": "Systeme",
+        "anschlussnutzerSectionTitle": "Anschlussnutzer",
+        "endkundengruppe": "Endkundengruppe / Branche"
+      },
+      "createPage": {
+        "title": "Endkunde anlegen",
+        "submitAction": "Anlegen"
+      },
+      "aendernPage": {
+        "title": "Endkunde ändern",
+        "submitAction": "Speichern",
+        "piiMaskiertHinweis": "Die personenbezogenen Daten sind für diesen Datensatz aktuell maskiert (z. B. gesperrt oder bereits gelöscht). Bitte Name, Anschrift und ggf. Kontakt bei Bedarf vollständig neu eingeben — leer gelassene Felder werden beim Speichern übernommen (Kontakt gilt dann als „keine Angabe\")."
+      },
+      "form": {
+        "name": "Name",
+        "anschrift": "Anschrift",
+        "kontakt": "Kontakt",
+        "kontaktHinweis": "Optional. Ansprechperson für Rückfragen, z. B. E-Mail oder Telefon.",
+        "errors": {
+          "nameErforderlich": "Name ist erforderlich.",
+          "nameZuLang": "Name darf höchstens 512 Zeichen lang sein.",
+          "anschriftErforderlich": "Anschrift ist erforderlich.",
+          "anschriftZuLang": "Anschrift darf höchstens 1024 Zeichen lang sein.",
+          "kontaktZuLang": "Kontakt darf höchstens 512 Zeichen lang sein.",
+          "endkundengruppeZuLang": "Die Branche darf höchstens 200 Zeichen lang sein."
+        },
+        "endkundengruppe": "Endkundengruppe / Branche",
+        "endkundengruppeHinweis": "Für den Nachweis der leistungsabhängigen Komponente gegenüber dem BAFA (z. B. „Kreditinstitut\"). Freitext, weil die verbindliche Kategorienliste des BAFA-Formulars noch nicht vorliegt — schreiben Sie sie über alle Kunden hinweg gleich, sonst zerfällt die Gruppe in der Aufstellung."
+      },
+      "verbrauch": {
+        "keinStandort": "Für diesen Endkunden ist noch kein Standort angelegt — es kann kein Verbrauch angezeigt werden.",
+        "mehrereLiegenschaftenHinweis": "Mehrere Liegenschaften — je Liegenschaft eine eigene Verbrauchsübersicht statt einer Gesamtsumme (unterschiedliche Energieträger/Einheiten dürfen nicht addiert werden)."
+      },
+      "klartextHinweis": "Klartextnamen sind zweckgebunden für die Stammdatenpflege — jede Einsicht wird protokolliert."
+    },
+    "system": {
+      "listPage": {
+        "title": "Systeme",
+        "createAction": "System anlegen"
+      },
+      "tabelle": {
+        "caption": "Liste der Systeme",
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "bezeichnung": "Bezeichnung",
+        "status": "Status",
+        "createdAt": "Angelegt am",
+        "leer": "Noch kein System angelegt. Ein System ist die fachliche Bilanzgrenze, auf die sich eine Einsparberechnung bezieht.",
+        "detailsAnzeigen": "Details anzeigen",
+        "captionFuerEndkunde": "Systeme dieses Endkunden",
+        "leerFuerEndkunde": "Für diesen Endkunden ist noch kein System angelegt. Ein System beschreibt die fachliche Bilanzgrenze der Einsparberechnung."
+      },
+      "detailPage": {
+        "title": "System-Detail",
+        "backAction": "Zurück zur Liste"
+      },
+      "detail": {
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "bezeichnung": "Bezeichnung",
+        "systemgrenze": "Systemgrenze",
+        "systembeschreibung": "Systembeschreibung",
+        "status": "Status",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am",
+        "stilllegenAction": "Stilllegen",
+        "stilllegenErfolgreich": "System wurde erfolgreich stillgelegt.",
+        "bereitsStillgelegtHinweis": "Dieses System ist bereits stillgelegt.",
+        "einflussgroessenSectionTitle": "Einflussgrößen",
+        "einflussgroessenSectionHinweis": "Klartext-Einflussgrößen (z. B. Personenzahl, Nutzfläche) — ausschließlich für das Betriebs-Team, jede Einsicht wird protokolliert.",
+        "einflussgroessenAnzeigenAction": "Einflussgrößen anzeigen",
+        "einflussgroesseErfassenAction": "Einflussgröße erfassen",
+        "zaehlerSectionTitle": "Zähler",
+        "standort": "Standort"
+      },
+      "createPage": {
+        "title": "System anlegen",
+        "submitAction": "Anlegen"
+      },
+      "aendernSection": {
+        "title": "System ändern",
+        "submitAction": "Speichern"
+      },
+      "form": {
+        "endkundeId": "Endkunde",
+        "endkundeIdPlatzhalter": "Bitte wählen",
+        "bezeichnung": "Bezeichnung",
+        "systemgrenze": "Systemgrenze",
+        "systembeschreibung": "Systembeschreibung",
+        "systembeschreibungHinweis": "Optional. Freitext für Anlagenart, Baujahr oder Besonderheiten — hilft später beim Nachvollziehen der Berechnung.",
+        "errors": {
+          "endkundeErforderlich": "Endkunde ist erforderlich.",
+          "bezeichnungErforderlich": "Bezeichnung ist erforderlich.",
+          "bezeichnungZuLang": "Bezeichnung darf höchstens 200 Zeichen lang sein.",
+          "systemgrenzeErforderlich": "Systemgrenze ist erforderlich.",
+          "systemgrenzeZuLang": "Systemgrenze darf höchstens 2000 Zeichen lang sein.",
+          "systembeschreibungZuLang": "Systembeschreibung darf höchstens 4000 Zeichen lang sein."
+        },
+        "bezeichnungHinweis": "Sprechender Name, unter dem dieses System in Listen und Auswahlfeldern erscheint — z. B. „Heizzentrale Nord\".",
+        "systemgrenzeHinweis": "Was fachlich dazugehört und was nicht. Diese Abgrenzung bestimmt, welche Verbräuche in die Einsparberechnung eingehen.",
+        "standortId": "Standort",
+        "standortIdPlatzhalter": "Kein Standort zugeordnet",
+        "standortIdHinweis": "Die Liegenschaft, auf die sich diese Berechnungseinheit bezieht. Der Einsparungsnachweis rechnet je Energieträger und Standort eines Endkunden. Nicht zu verwechseln mit der Verortung eines einzelnen Zählers — die ist feiner (Raum, Etage) und hat ihren eigenen Weg."
+      }
+    },
+    "zaehler": {
+      "listPage": {
+        "title": "Zähler",
+        "createAction": "Zähler anlegen"
+      },
+      "tabelle": {
+        "caption": "Liste der Zähler",
+        "id": "ID",
+        "systemId": "System",
+        "energietraeger": "Energieträger",
+        "status": "Status",
+        "createdAt": "Angelegt am",
+        "leer": "Noch kein Zähler angelegt. Zähler werden immer einem System zugeordnet — legen Sie zuerst ein System an, falls noch keines besteht.",
+        "detailsAnzeigen": "Details anzeigen",
+        "captionFuerSystem": "Zähler dieses Systems",
+        "leerFuerSystem": "Diesem System ist noch kein Zähler zugeordnet — ohne Zähler können für dieses System keine Messwerte erfasst werden.",
+        "empfang": "Datenempfang"
+      },
+      "detailPage": {
+        "title": "Zähler-Detail",
+        "backAction": "Zurück zur Liste"
+      },
+      "erwarteteKanaele": {
+        "einfuehrung": "Dieser Gerätetyp liefert die folgenden Messwerte. Legen Sie die passenden Kanäle an — Messgröße und Einheit müssen genau übereinstimmen, sonst bleiben die Werte liegen.",
+        "alleAngelegt": "Alle Kanäle, die dieser Gerätetyp liefert, sind angelegt.",
+        "geraetetypUnbekannt": "Für diesen Gerätetyp ist keine Auswertung hinterlegt. Messwerte dieses Zählers können derzeit nicht verarbeitet werden — prüfen Sie die Schreibweise oben.",
+        "angelegt": "angelegt",
+        "fehlt": "fehlt",
+        "anlegenAction": "Kanal anlegen",
+        "anlegenErfolg": "Der Messkanal wurde angelegt."
+      },
+      "detail": {
+        "id": "ID",
+        "systemId": "System",
+        "geraetetyp": "Gerätetyp",
+        "energietraeger": "Energieträger",
+        "status": "Status",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am",
+        "standortSectionTitle": "Standort",
+        "standortBreadcrumbAriaLabel": "Standort-Pfad",
+        "standortLeer": "Dieser Zähler ist noch keinem Standort zugeordnet.",
+        "standortZuordnenAction": "Standort zuordnen",
+        "standortOeffnenAction": "Standort öffnen",
+        "freshness": {
+          "praefix": "Letzte Übertragung:",
+          "nieEmpfangen": "Noch keine Übertragung empfangen.",
+          "keineMesskanaele": "Kein Messkanal vorhanden — für diesen Zähler werden derzeit keine Messwerte erwartet.",
+          "badgeOk": "läuft",
+          "badgeUeberfaellig": "überfällig"
+        },
+        "messkanaeleSectionTitle": "Messkanäle dieses Zählers",
+        "messkanalAnlegenAction": "Messkanal anlegen",
+        "stilllegenAction": "Stilllegen",
+        "stilllegenErfolgreich": "Zähler wurde erfolgreich stillgelegt.",
+        "bereitsStillgelegtHinweis": "Dieser Zähler ist bereits stillgelegt."
+      },
+      "createPage": {
+        "title": "Zähler anlegen",
+        "submitAction": "Anlegen"
+      },
+      "aendernSection": {
+        "title": "Zähler ändern",
+        "submitAction": "Speichern"
+      },
+      "form": {
+        "systemId": "System",
+        "systemIdPlatzhalter": "Bitte wählen",
+        "geraetetyp": "Gerätetyp",
+        "energietraeger": "Energieträger",
+        "energietraegerPlatzhalter": "Bitte wählen",
+        "errors": {
+          "systemErforderlich": "System ist erforderlich.",
+          "geraetetypErforderlich": "Gerätetyp ist erforderlich.",
+          "geraetetypZuLang": "Gerätetyp darf höchstens 200 Zeichen lang sein.",
+          "energietraegerErforderlich": "Energieträger ist erforderlich."
+        },
+        "systemIdHinweis": "Die fachliche Bilanzgrenze, zu der dieser Zähler beiträgt. Ist noch kein passendes System angelegt, legen Sie es zuerst an.",
+        "geraetetypHinweis": "Hersteller- und Typbezeichnung des Messgeräts, z. B. „Kamstrup MULTICAL 403\".",
+        "energietraegerHinweis": "Bestimmt, mit welchen anderen Werten dieser Zähler verrechnet werden darf — unterschiedliche Energieträger werden nie addiert."
+      },
+      "standort": {
+        "form": {
+          "standortId": "Standort-ID",
+          "errors": {
+            "standortIdErforderlich": "Standort-ID ist erforderlich.",
+            "standortIdUngueltig": "Standort-ID muss eine gültige UUID sein."
+          }
+        }
+      },
+      "empfang": {
+        "nichtAngebunden": "Kein Gerät angebunden",
+        "wartet": "Angebunden, noch keine Daten",
+        "empfaengt": "Empfängt"
+      }
+    },
+    "messkanal": {
+      "tabelle": {
+        "caption": "Messkanäle des Zählers",
+        "id": "ID",
+        "messgroesse": "Messgröße",
+        "einheit": "Einheit",
+        "art": "Art",
+        "status": "Status",
+        "obisKennzahl": "OBIS-Kennzahl",
+        "letzteUebertragung": "Letzte Übertragung",
+        "freshnessNieEmpfangen": "Noch nie empfangen",
+        "createdAt": "Angelegt am",
+        "leer": "Für diesen Zähler ist noch kein Messkanal angelegt. Ohne Messkanal können keine Messwerte zugeordnet werden.",
+        "detailsAnzeigen": "Details anzeigen",
+        "lastgangAnsehenAction": "Lastgang ansehen",
+        "lastgangTooltipLabel": "Hinweis zum Lastgang-Zugriff"
+      },
+      "detailPage": {
+        "title": "Messkanal-Detail",
+        "backAction": "Zurück zum Zähler"
+      },
+      "detail": {
+        "id": "ID",
+        "zaehlerId": "Zähler",
+        "messgroesse": "Messgröße",
+        "einheit": "Einheit",
+        "art": "Art",
+        "status": "Status",
+        "obisKennzahl": "OBIS-Kennzahl",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am",
+        "stilllegenAction": "Stilllegen",
+        "stilllegenErfolgreich": "Messkanal wurde erfolgreich stillgelegt.",
+        "bereitsStillgelegtHinweis": "Dieser Messkanal ist bereits stillgelegt.",
+        "istUntermessungLabel": "Messstellen-Rolle",
+        "istUntermessungJa": "Untermessung (Teil eines anderen Zählers)",
+        "istUntermessungNein": "Eigene Messstelle",
+        "richtung": "Energierichtung"
+      },
+      "createPage": {
+        "title": "Messkanal anlegen",
+        "submitAction": "Anlegen",
+        "backAction": "Zurück zum Zähler"
+      },
+      "aendernSection": {
+        "title": "Messkanal ändern",
+        "submitAction": "Speichern"
+      },
+      "form": {
+        "messgroesse": "Messgröße",
+        "einheit": "Einheit",
+        "art": "Art",
+        "artPlatzhalter": "Bitte wählen",
+        "obisKennzahl": "OBIS-Kennzahl",
+        "obisKennzahlHinweis": "Optional, nur bei Strom. Genormte Kennzahl des Messwerts (z. B. 1-0:1.8.0 für Wirkarbeit Bezug).",
+        "errors": {
+          "messgroesseErforderlich": "Messgröße ist erforderlich.",
+          "messgroesseZuLang": "Messgröße darf höchstens 100 Zeichen lang sein.",
+          "einheitErforderlich": "Einheit ist erforderlich.",
+          "einheitZuLang": "Einheit darf höchstens 50 Zeichen lang sein.",
+          "artErforderlich": "Art ist erforderlich.",
+          "obisKennzahlZuLang": "OBIS-Kennzahl darf höchstens 50 Zeichen lang sein.",
+          "richtungErforderlich": "Bitte eine Energierichtung wählen."
+        },
+        "messgroesseHinweis": "Die Messgröße, die dieser Kanal führt, z. B. wirkarbeit. Sie muss exakt so geschrieben sein, wie das Gerät sie meldet — sonst findet ein eintreffender Messwert seinen Kanal nicht und bleibt in der Quarantäne liegen.",
+        "einheitHinweis": "Einheit der Messwerte, z. B. kWh, m3 oder degC.",
+        "artHinweis": "Kumulativer Zählerstand = fortlaufend steigender Zählerstand. Intervallverbrauch = Verbrauch je Zeitabschnitt.",
+        "istUntermessung": "Untermessung",
+        "istUntermessungHinweis": "Ankreuzen, wenn dieser Kanal einen Teil dessen misst, was ein anderer Zähler desselben Systems bereits erfasst. Die Einsparberechnung lässt solche Kanäle aus — ohne das Häkchen zählt sie denselben Verbrauch doppelt.",
+        "richtung": "Energierichtung",
+        "richtungHinweis": "Bezug ist der Regelfall. Der Einsparungsnachweis rechnet „Ist-Verbrauch = Bezug + Eigenerzeugung − Einspeisung\" und verlangt, dass selbst erzeugte Energie getrennt vom Netzbezug ausgewiesen wird — selbsterzeugter Strom ist keine Einsparung."
+      },
+      "richtung": {
+        "bezug": "Bezug (Verbrauch)",
+        "eigenerzeugung": "Eigenerzeugung",
+        "einspeisung": "Einspeisung ins Netz"
+      }
+    },
+    "nutzungsverhaeltnis": {
+      "listPage": {
+        "title": "Nutzungsverhältnisse",
+        "createAction": "Nutzungsverhältnis anlegen"
+      },
+      "tabelle": {
+        "caption": "Liste der Nutzungsverhältnisse",
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "anschlussnutzerId": "Anschlussnutzer",
+        "systemId": "System",
+        "datenklasse": "Datenklasse",
+        "rolle": "Rolle",
+        "gueltigVon": "Gültig von",
+        "gueltigBis": "Gültig bis",
+        "createdAt": "Angelegt am",
+        "leer": "Noch kein Nutzungsverhältnis erfasst. Es verknüpft einen Anschlussnutzer zeitlich befristet mit einem Endkunden-Vertrag.",
+        "detailsAnzeigen": "Details anzeigen"
+      },
+      "detailPage": {
+        "title": "Nutzungsverhältnis-Detail",
+        "backAction": "Zurück zur Liste"
+      },
+      "detail": {
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "anschlussnutzerId": "Anschlussnutzer",
+        "systemId": "System",
+        "datenklasse": "Datenklasse",
+        "rolle": "Rolle",
+        "gueltigVon": "Gültig von",
+        "gueltigBis": "Gültig bis",
+        "gueltigBisAktuell": "aktuell (kein Enddatum)",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am"
+      },
+      "createPage": {
+        "title": "Nutzungsverhältnis anlegen",
+        "submitAction": "Anlegen"
+      },
+      "beendenSection": {
+        "title": "Nutzungsverhältnis beenden",
+        "submitAction": "Beenden",
+        "bereitsBeendetHinweis": "Dieses Nutzungsverhältnis ist bereits beendet."
+      },
+      "form": {
+        "endkundeId": "Endkunde",
+        "endkundeIdPlatzhalter": "Bitte wählen",
+        "anschlussnutzerId": "Anschlussnutzer",
+        "anschlussnutzerIdPlatzhalter": "Bitte wählen",
+        "systemId": "System",
+        "systemIdPlatzhalter": "Bitte wählen",
+        "datenklasse": "Datenklasse",
+        "datenklassePlatzhalter": "Bitte wählen",
+        "rolle": "Rolle",
+        "rollePlatzhalter": "Bitte wählen",
+        "gueltigVon": "Gültig von",
+        "gueltigBis": "Gültig bis",
+        "errors": {
+          "endkundeErforderlich": "Endkunde ist erforderlich.",
+          "anschlussnutzerErforderlich": "Anschlussnutzer ist erforderlich.",
+          "systemErforderlich": "System ist erforderlich.",
+          "datenklasseErforderlich": "Datenklasse ist erforderlich.",
+          "rolleErforderlich": "Rolle ist erforderlich.",
+          "gueltigVonErforderlich": "Gültig-von-Datum ist erforderlich.",
+          "gueltigBisErforderlich": "Gültig-bis-Datum ist erforderlich."
+        },
+        "datenklasseHinweis": "Abrechnungsminimum = nur die für die Abrechnung nötigen Werte. Detailverbrauch = feinere Auflösung, setzt eine entsprechende Einwilligung voraus.",
+        "gueltigVonHinweis": "Beginn der Nutzung, z. B. Einzugsdatum.",
+        "gueltigBisHinweis": "Leer lassen, solange die Nutzung andauert — das Verhältnis wird später über „Beenden\" geschlossen, nicht gelöscht."
+      },
+      "begriffe": {
+        "nutzungsverhaeltnisLabel": "Nutzungsverhältnis",
+        "nutzungsverhaeltnisTooltip": "Zeitlich befristete Zuordnung eines Anschlussnutzers zu einem Endkunden-Vertrag — endet automatisch beim Auszug, ohne Datenverlust.",
+        "anschlussnutzerLabel": "Anschlussnutzer",
+        "anschlussnutzerTooltip": "Wer den Anschluss tatsächlich nutzt (z. B. Mieter) — kann vom Endkunden (Vertragspartner) abweichen."
+      }
+    },
+    "anschlussnutzer": {
+      "listPage": {
+        "title": "Anschlussnutzer",
+        "createAction": "Anschlussnutzer anlegen"
+      },
+      "tabelle": {
+        "caption": "Liste der Anschlussnutzer",
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "verarbeitungsStatus": "Verarbeitungsstatus",
+        "createdAt": "Angelegt am",
+        "leer": "Noch kein Anschlussnutzer erfasst. Das ist der Normalfall, solange Vertragspartner und tatsächlicher Nutzer identisch sind.",
+        "detailsAnzeigen": "Details anzeigen",
+        "captionFuerEndkunde": "Anschlussnutzer dieses Endkunden",
+        "leerFuerEndkunde": "Für diesen Endkunden ist kein abweichender Anschlussnutzer erfasst — Vertragspartner und tatsächlicher Nutzer sind also identisch."
+      },
+      "detailPage": {
+        "title": "Anschlussnutzer-Detail",
+        "backAction": "Zurück zur Liste"
+      },
+      "detail": {
+        "id": "ID",
+        "endkundeId": "Endkunde",
+        "verarbeitungsStatus": "Verarbeitungsstatus",
+        "createdAt": "Angelegt am",
+        "updatedAt": "Geändert am",
+        "piiSectionTitle": "Personenbezogene Daten",
+        "piiName": "Name",
+        "piiKontakt": "Kontakt",
+        "sperrenAction": "Sperren",
+        "sperrenDialogTitel": "Anschlussnutzer sperren",
+        "sperrenDialogBeschreibung": "Die Verarbeitung der personenbezogenen Daten dieses Anschlussnutzers wird eingeschränkt (Art. 18 DSGVO). Die Daten bleiben vollständig erhalten, werden aber ab sofort maskiert angezeigt. Die Einschränkung wirkt unabhängig von der des Endkunden.",
+        "sperrenBestaetigenAction": "Sperren",
+        "piiKontaktKeineAngabe": "keine Angabe"
+      },
+      "createPage": {
+        "title": "Anschlussnutzer anlegen",
+        "submitAction": "Anlegen"
+      },
+      "form": {
+        "endkundeId": "Endkunde",
+        "endkundeIdPlatzhalter": "Bitte wählen",
+        "name": "Name",
+        "kontakt": "Kontakt",
+        "kontaktHinweis": "Optional. Ansprechperson für Rückfragen, z. B. E-Mail oder Telefon.",
+        "errors": {
+          "endkundeErforderlich": "Endkunde ist erforderlich.",
+          "nameErforderlich": "Name ist erforderlich.",
+          "nameZuLang": "Name darf höchstens 512 Zeichen lang sein.",
+          "kontaktZuLang": "Kontakt darf höchstens 512 Zeichen lang sein."
+        }
+      }
+    },
+    "messkonzept": {
+      "tabelle": {
+        "caption": "Messkonzept-Versionen",
+        "versionNr": "Version",
+        "typ": "Typ",
+        "gueltigVon": "Gültig von",
+        "gueltigBis": "Gültig bis",
+        "createdAt": "Angelegt am",
+        "leer": "Noch keine Messkonzept-Version vorhanden.",
+        "detailsAnzeigen": "Details anzeigen"
+      },
+      "detailPage": {
+        "title": "Messkonzept-Version-Detail",
+        "backAction": "Zurück zum Endkunden"
+      },
+      "detail": {
+        "versionNr": "Version",
+        "typ": "Typ",
+        "systemgrenze": "Systemgrenze",
+        "systembeschreibung": "Systembeschreibung",
+        "bereinigungsverfahren": "Bereinigungsverfahren",
+        "messgeraeteWahl": "Messgerätewahl",
+        "geraeteerkennungsVerfahren": "Geräteerkennungsverfahren",
+        "aenderungsgrund": "Änderungsgrund",
+        "aenderungsgrundKeineAngabe": "keine Angabe",
+        "gueltigVon": "Gültig von",
+        "gueltigBis": "Gültig bis",
+        "gueltigBisAktuell": "aktuell (kein Enddatum)",
+        "createdAt": "Angelegt am",
+        "energietraegerSectionTitle": "Energieträger & Baseline",
+        "energietraegerTabelle": {
+          "caption": "Energieträger und Baseline-Werte dieser Version",
+          "energietraeger": "Energieträger",
+          "baselineWert": "Baseline-Wert",
+          "baselineEinheit": "Einheit",
+          "baselineMethode": "Methode",
+          "baselineBegruendung": "Begründung",
+          "baselineBeleg": "Beleg",
+          "abrechnungenSuffix": "Abrechnungen",
+          "keineAngabe": "keine Angabe",
+          "energietraegerSubstitution": "Substitution",
+          "substitutionJa": "Ja",
+          "substitutionNein": "Nein"
+        }
+      },
+      "createPage": {
+        "title": "Neue Messkonzept-Version anlegen",
+        "submitAction": "Version anlegen",
+        "backAction": "Zurück zum Endkunden"
+      },
+      "form": {
+        "typ": "Typ",
+        "typPlatzhalter": "Bitte wählen",
+        "typHinweis": "Vereinfacht: Die Baseline stammt aus Jahresabrechnungen; Grundlast und Witterungsanteil werden gesetzt. Standard und Alternativ: Die Baseline ist gemessen — die Berechnung passt ihre Koeffizienten an die erfassten Baseline-Perioden an und weist eine Modellgüte aus. Dafür müssen Baseline-Perioden erfasst sein, sonst bricht der Berechnungslauf ab.",
+        "systemgrenze": "Systemgrenze",
+        "systembeschreibung": "Systembeschreibung",
+        "bereinigungsverfahren": "Bereinigungsverfahren",
+        "messgeraeteWahl": "Messgerätewahl",
+        "geraeteerkennungsVerfahren": "Geräteerkennungsverfahren",
+        "aenderungsgrund": "Änderungsgrund",
+        "aenderungsgrundHinweis": "Optional.",
+        "energietraegerSectionTitle": "Energieträger & Baseline",
+        "energietraegerHinweis": "Mindestens ein Energieträger ist erforderlich (höchstens 20).",
+        "energietraegerZeileLegend": "Energieträger",
+        "energietraeger": "Energieträger",
+        "energietraegerPlatzhalter": "Bitte wählen",
+        "baselineWert": "Baseline-Wert",
+        "baselineWertHinweis": "Optional.",
+        "baselineEinheit": "Einheit",
+        "baselineMethode": "Methode",
+        "baselineBegruendung": "Begründung",
+        "baselineBegruendungHinweis": "Pflicht, wenn weniger als 3 Jahresabrechnungen vorliegen.",
+        "baselineAbrechnungenAnzahl": "Anzahl Jahresabrechnungen",
+        "baselineAbrechnungenAnzahlHinweis": "Aus wie vielen Jahresabrechnungen des Versorgers die Baseline gemittelt wurde. Bei weniger als drei ist eine Begründung Pflicht (Merkblatt Kap. 2.1.2).",
+        "baselineBelegAktenzeichen": "Aktenzeichen des Belegs",
+        "baselineBelegAktenzeichenHinweis": "Unter welcher Kennung die Abrechnungen außerhalb des Systems geführt werden. Die Abrechnungen selbst werden hier nicht abgelegt.",
+        "baselineBelegAblageort": "Ablageort",
+        "baselineBelegRef": "Beleg-Referenz (UUID)",
+        "baselineBelegRefHinweis": "Optional.",
+        "energietraegerHinzufuegenAction": "Energieträger hinzufügen",
+        "energietraegerEntfernenAction": "Entfernen",
+        "errors": {
+          "typErforderlich": "Typ ist erforderlich.",
+          "systemgrenzeErforderlich": "Systemgrenze ist erforderlich.",
+          "systemgrenzeZuLang": "Systemgrenze darf höchstens 4000 Zeichen lang sein.",
+          "systembeschreibungErforderlich": "Systembeschreibung ist erforderlich.",
+          "systembeschreibungZuLang": "Systembeschreibung darf höchstens 4000 Zeichen lang sein.",
+          "bereinigungsverfahrenErforderlich": "Bereinigungsverfahren ist erforderlich.",
+          "bereinigungsverfahrenZuLang": "Bereinigungsverfahren darf höchstens 4000 Zeichen lang sein.",
+          "messgeraeteWahlErforderlich": "Messgerätewahl ist erforderlich.",
+          "messgeraeteWahlZuLang": "Messgerätewahl darf höchstens 4000 Zeichen lang sein.",
+          "geraeteerkennungsVerfahrenErforderlich": "Geräteerkennungsverfahren ist erforderlich.",
+          "geraeteerkennungsVerfahrenZuLang": "Geräteerkennungsverfahren darf höchstens 4000 Zeichen lang sein.",
+          "aenderungsgrundZuLang": "Änderungsgrund darf höchstens 2000 Zeichen lang sein.",
+          "energietraegerErforderlich": "Energieträger ist erforderlich.",
+          "energietraegerListeErforderlich": "Mindestens ein Energieträger ist erforderlich.",
+          "energietraegerListeZuLang": "Höchstens 20 Energieträger-Einträge sind zulässig.",
+          "baselineWertUngueltig": "Baseline-Wert muss eine Zahl sein.",
+          "baselineEinheitZuLang": "Einheit darf höchstens 50 Zeichen lang sein.",
+          "baselineMethodeZuLang": "Methode darf höchstens 200 Zeichen lang sein.",
+          "baselineBegruendungZuLang": "Begründung darf höchstens 2000 Zeichen lang sein.",
+          "baselineAbrechnungenAnzahlUngueltig": "Bitte eine Zahl von 0 bis 99 eintragen.",
+          "baselineBelegAktenzeichenZuLang": "Das Aktenzeichen darf höchstens 200 Zeichen haben.",
+          "baselineBelegAblageortZuLang": "Der Ablageort darf höchstens 200 Zeichen haben.",
+          "baselineBelegRefUngueltig": "Beleg-Referenz muss eine gültige UUID sein."
+        },
+        "energietraegerSubstitution": "Energieträger-Substitution liegt vor",
+        "energietraegerSubstitutionHinweis": "Nur ankreuzen, wenn für diesen Energieträger ein Trägerwechsel stattgefunden hat (z. B. Öl → Wärmepumpe). Das Merkblatt Technik v2.2 Kap. 3 verlangt in diesem Fall das alternative oder Standard-Messkonzept; der Endkunde wird im BAFA-Nachweis ausgewiesen, aber ohne Einsparwert."
+      },
+      "systemgrenze": {
+        "titel": "Systemgrenze",
+        "beschreibung": "Welche Systeme ein Berechnungslauf für diesen Energieträger umfasst. Jeder Zähler der ausgewählten Systeme geht in Verbrauch und Einsparung ein.",
+        "laedt": "Wird geladen …",
+        "ladeFehler": "Die Systemgrenze konnte nicht geladen werden.",
+        "keineSysteme": "Für diesen Endkunden ist noch kein System angelegt. Ohne System gibt es nichts zuzuordnen.",
+        "fallbackWarnung": "Es ist kein System zugeordnet. Berechnungsläufe nehmen deshalb ALLE aktiven Zähler dieses Endkunden mit diesem Energieträger. Hat der Kunde mehrere Messkonzepte, fließt dabei fremder Verbrauch ein.",
+        "bearbeiten": "Systemgrenze ändern",
+        "speichern": "Systemgrenze speichern",
+        "speichernLaeuft": "Wird gespeichert …",
+        "abbrechen": "Abbrechen",
+        "gespeichert": "Die Systemgrenze ist gespeichert. Sie gilt für alle künftigen Berechnungsläufe.",
+        "fehler": "Die Systemgrenze konnte nicht gespeichert werden.",
+        "auswahlLegende": "Systeme in der Systemgrenze",
+        "hinweisNachtraeglich": "Bereits gerechnete Läufe bleiben unverändert — sie tragen die Grenze, die zum Zeitpunkt der Rechnung galt."
+      },
+      "baselinePerioden": {
+        "titel": "Baseline-Bezugszeiträume",
+        "beschreibung": "Die Zeiträume der Jahresabrechnungen, aus denen die Baseline gemittelt wurde (TB-02). Aus ihnen leitet der Berechnungslauf die Gradtagzahl der Bezugsjahre ab — den Nenner der Witterungsbereinigung.",
+        "laedt": "Wird geladen …",
+        "ladeFehler": "Die Baseline-Bezugszeiträume konnten nicht geladen werden.",
+        "leer": "Es ist kein Bezugszeitraum erfasst.",
+        "keineWarnung": "Es ist kein Bezugszeitraum erfasst. Die Gradtagzahl der Bezugsjahre lässt sich daraus nicht ableiten — Berechnungsläufe brechen ab, sofern niemand den Wert von Hand vorgibt. Ein von Hand vorgegebener Wert macht die Rechnung nicht richtiger, nur möglich.",
+        "bearbeiten": "Bezugszeiträume ändern",
+        "speichern": "Bezugszeiträume speichern",
+        "speichernLaeuft": "Wird gespeichert …",
+        "abbrechen": "Abbrechen",
+        "gespeichert": "Die Bezugszeiträume sind gespeichert. Sie gelten für alle künftigen Berechnungsläufe.",
+        "fehler": "Die Bezugszeiträume konnten nicht gespeichert werden.",
+        "zeileHinzufuegen": "Zeitraum hinzufügen",
+        "zeileEntfernen": "Zeitraum entfernen",
+        "einheitLeer": "keine Angabe",
+        "tage": "Tage",
+        "laengeAuffaellig": "Länge weicht deutlich von einem Jahr ab",
+        "bisHinweis": "„Bis“ ist der erste Tag NACH dem Abrechnungszeitraum. Eine Abrechnung über das Kalenderjahr 2023 wird als 01.01.2023 bis 01.01.2024 erfasst. Nach dem Speichern steht in der Liste der letzte enthaltene Tag.",
+        "anzahlWeichtAbPraefix": "Die Angaben passen nicht zusammen: Das Messkonzept nennt",
+        "anzahlWeichtAbMitte": "Jahresabrechnungen, erfasst sind",
+        "anzahlWeichtAbSchluss": "Zeiträume. Eine der beiden Angaben ist falsch.",
+        "mengeMittelPraefix": "Mittelwert der erfassten Mengen:",
+        "mengeMittelBaseline": "Baseline im Messkonzept:",
+        "mengeMittelHinweis": "TB-02 verlangt genau diesen Mittelwert als Baseline — weichen die Zahlen ab, stimmt eine von beiden nicht.",
+        "hinweisNachtraeglich": "Bereits gerechnete Läufe bleiben unverändert — sie tragen die Bezugszeiträume, die zum Zeitpunkt der Rechnung galten.",
+        "tabelle": {
+          "caption": "Bezugszeiträume bearbeiten"
+        },
+        "spalte": {
+          "von": "Von",
+          "bis": "Bis (ausschließlich)",
+          "menge": "Menge",
+          "einheit": "Einheit",
+          "aktion": "Aktion"
+        },
+        "aria": {
+          "von": "Beginn des Zeitraums",
+          "bis": "Ende des Zeitraums (ausschließlich)",
+          "menge": "Abgerechnete Menge im Zeitraum",
+          "einheit": "Einheit der Menge im Zeitraum"
+        }
+      }
+    },
+    "monitoring": {
+      "listPage": {
+        "title": "Datenqualität & Störungen"
+      },
+      "vollstaendigkeit": {
+        "sectionTitle": "Vollständigkeit"
+      },
+      "tabelle": {
+        "caption": "Vollständigkeits-Lücken je Endkunde",
+        "endkundeId": "Endkunde",
+        "ebene": "Ebene",
+        "luecken": "Lücken",
+        "geprueftAm": "Geprüft am",
+        "leer": "Keine Lücken gefunden — alle geprüften Endkunden sind vollständig.",
+        "keineLuecken": "Keine Lücken"
+      },
+      "art19": {
+        "listPage": {
+          "title": "Mitteilungspflichten nach Art. 19",
+          "beschreibung": "Wurden Daten einer Person bereits an das BAFA übermittelt und wird die Person danach eingeschränkt (Art. 18) oder gelöscht (Art. 17), ist der Empfänger zu unterrichten (Art. 19 DSGVO). Die Ausnahme wegen unverhältnismäßigen Aufwands greift hier nicht: es gibt einen Empfänger, er ist aktenkundig. Erfüllte Pflichten bleiben sichtbar — sie sind der Nachweis."
+        },
+        "kanalLabel": "Weg der Mitteilung (gilt für alle Meldungen)",
+        "meldenErfolg": "Die Mitteilung wurde dokumentiert.",
+        "subjektTyp": {
+          "endkunde": "Endkunde",
+          "anschlussnutzer": "Anschlussnutzer"
+        },
+        "anlass": {
+          "einschraenkung_art18": "Einschränkung (Art. 18)",
+          "loeschung_art17": "Löschung (Art. 17)"
+        },
+        "tabelle": {
+          "caption": "Mitteilungspflichten nach Art. 19, älteste Einreichung zuerst",
+          "einreichung": "Empfänger und Einreichung",
+          "uebermitteltAt": "Übermittelt am",
+          "subjekt": "Betroffene Person",
+          "anlass": "Anlass",
+          "status": "Status",
+          "meldenAction": "Mitteilung dokumentieren",
+          "mitgeteiltAm": "mitgeteilt am",
+          "leer": "Derzeit besteht keine Mitteilungspflicht nach Art. 19."
+        }
+      },
+      "einschraenkungFristen": {
+        "listPage": {
+          "title": "Fristen der Verarbeitungseinschränkungen",
+          "beschreibung": "Wiedervorlage für die befristeten Tatbestände des Art. 18 Abs. 1 DSGVO — bestrittene Richtigkeit (lit. a) und schwebender Widerspruch (lit. d). Beide bestehen nur so lange, wie ihr Grund fortdauert. Einschränkungen nach lit. b und lit. c erscheinen hier nicht: sie enden nicht von selbst."
+        },
+        "subjektTyp": {
+          "endkunde": "Endkunde",
+          "anschlussnutzer": "Anschlussnutzer"
+        },
+        "tabelle": {
+          "caption": "Offene befristete Verarbeitungseinschränkungen, älteste zuerst",
+          "subjekt": "Betroffene Person",
+          "endkundeId": "Endkunde",
+          "grund": "Grund",
+          "gesperrtSeit": "Eingeschränkt seit",
+          "tageOffen": "Tage offen",
+          "ueberfaelligSeit": "überfällig,",
+          "leer": "Derzeit besteht keine befristete Verarbeitungseinschränkung."
+        }
+      },
+      "ausfaelle": {
+        "sectionTitle": "Datenausfälle",
+        "tabelle": {
+          "caption": "Kanäle mit Ausfall oder überfälliger Freshness",
+          "zaehlerId": "Zähler",
+          "messkanalId": "Messkanal",
+          "letzteUebertragung": "Letzte Übertragung",
+          "status": "Status",
+          "nurUeberfaellig": "Nur überfällig, kein dokumentierter Ausfall",
+          "leer": "Keine Ausfälle und keine überfälligen Kanäle — die Datenübertragung läuft.",
+          "ausfallStatus": {
+            "offen": "offen",
+            "andauernd": "andauernd",
+            "behoben": "behoben"
+          }
+        }
+      },
+      "pageTitle": "Vollständigkeit & Störungen"
+    },
+    "standort": {
+      "baum": {
+        "pageTitle": "Standorte / Gebäudestruktur",
+        "sectionTitle": "Gebäudestruktur",
+        "backAction": "Zurück zum Endkunden",
+        "ariaLabel": "Standort-/Gebäudestruktur-Baum",
+        "leer": "Noch kein Standort angelegt.",
+        "zaehlerAnzahlPraefix": "Zähler:",
+        "keinePiiBerechtigungSuffix": "(ohne Leseberechtigung)",
+        "unbekannterKnoten": "Unbekannter Knoten"
+      },
+      "form": {
+        "typ": "Typ",
+        "typPlatzhalter": "Bitte wählen",
+        "typHinweisAbfolge": "Empfohlene Reihenfolge: Liegenschaft → Gebäude → Bauteil → Etage → Einheit → Raum. Abweichungen (z. B. ein Raum direkt unter einer Liegenschaft) sind zulässig.",
+        "sortierung": "Sortierung",
+        "klimareferenz": "Klimastation",
+        "klimareferenzHinweis": "DWD-Stationskennung für die Witterungsbereinigung, z. B. DWD-04094. Sie gehört zum Standort, nicht zum einzelnen Berechnungslauf — die Berechnung schlägt sie dann vor. Leer lassen, wenn keine hinterlegt werden soll.",
+        "bezeichnung": "Bezeichnung",
+        "adresse": "Adresse",
+        "adresseHinweisWurzel": "Pflichtfeld für Liegenschaften/Gebäude ohne übergeordneten Knoten.",
+        "adresseHinweisKind": "Nur bei Gebäude zulässig, hier optional. Bei anderen Typen unterhalb der Wurzel nicht zulässig.",
+        "geo": "Geo-Koordinaten",
+        "geoHinweisVollersatz": "Optional. Vollersatz: ein leer gelassenes Feld löscht eine ggf. bereits hinterlegte Angabe.",
+        "wurzelAnlegenAction": "Wurzel anlegen",
+        "kindAnlegenAction": "Kind anlegen",
+        "strukturSpeichernAction": "Struktur speichern",
+        "piiSpeichernAction": "Speichern",
+        "verschiebenZiel": "Neuer übergeordneter Knoten",
+        "verschiebenZielPlatzhalter": "Bitte wählen",
+        "verschiebenZielWurzel": "— An die Wurzel —",
+        "verschiebenAction": "Verschieben",
+        "stilllegenGrundLabel": "Grund",
+        "stilllegenGrundPlatzhalter": "Bitte wählen",
+        "stilllegenGrundOptionen": {
+          "fehlanlage_korrektur": "Korrektur einer Fehlanlage",
+          "gebaeude_ausser_betrieb": "Gebäude außer Betrieb",
+          "nutzung_beendet": "Nutzung beendet",
+          "sonstige": "Sonstige"
+        },
+        "errors": {
+          "typErforderlich": "Typ ist erforderlich.",
+          "wurzelTypUngueltig": "Ein Knoten ohne übergeordneten Knoten muss Liegenschaft oder Gebäude sein.",
+          "sortierungUngueltig": "Sortierung muss eine nicht-negative ganze Zahl sein.",
+          "klimareferenzZuLang": "Höchstens 64 Zeichen.",
+          "klimareferenzUngueltig": "Nur Buchstaben, Ziffern, Bindestrich und Unterstrich erlaubt.",
+          "bezeichnungErforderlich": "Bezeichnung ist erforderlich.",
+          "bezeichnungZuLang": "Bezeichnung darf höchstens 512 Zeichen lang sein.",
+          "adresseZuLang": "Adresse darf höchstens 1024 Zeichen lang sein.",
+          "adresseNichtZulaessig": "Adresse ist auf dieser Ebene nicht zulässig (nur Liegenschaft/Gebäude ohne übergeordneten Knoten oder Gebäude).",
+          "adresseErforderlich": "Adresse ist für einen Knoten ohne übergeordneten Knoten erforderlich.",
+          "geoZuLang": "Geo-Koordinaten dürfen höchstens 128 Zeichen lang sein.",
+          "zielErforderlich": "Bitte einen Ziel-Knoten wählen.",
+          "grundErforderlich": "Bitte einen Grund wählen.",
+          "verschiebenKonflikt": "Verschieben nicht möglich: Der Ziel-Knoten liegt im eigenen Teilbaum, überschreitet die maximale Tiefe oder gehört zu einem anderen Endkunden.",
+          "verschiebenUngueltig": "Verschieben nicht möglich: Nur Liegenschaften/Gebäude dürfen an die Wurzel verschoben werden.",
+          "verschiebenZielNichtGefunden": "Der gewählte Ziel-Knoten wurde nicht gefunden.",
+          "stilllegenKonflikt": "Stilllegen nicht möglich: Der Knoten hat noch aktive Kinder oder eine offene Zähler-Verortung.",
+          "loeschenKonflikt": "Löschen nicht möglich: Der Knoten hat noch Kinder oder eine (auch historische) Zähler-Verortungshistorie."
+        }
+      },
+      "aktionen": {
+        "title": "Aktionen",
+        "ausgewaehlterKnoten": "Ausgewählter Knoten",
+        "status": "Status",
+        "kindAnlegenAction": "Kind anlegen",
+        "strukturBearbeitenAction": "Struktur bearbeiten",
+        "piiBearbeitenAction": "Bezeichnung/Adresse bearbeiten",
+        "verschiebenAction": "Verschieben",
+        "zaehlerVerwaltenAction": "Zähler verwalten",
+        "stilllegenAction": "Stilllegen",
+        "stilllegenDialogTitel": "Standort stilllegen",
+        "stilllegenDialogBeschreibung": "Der Knoten wechselt in den Status „stillgelegt\". Dies ist nur möglich, solange keine aktiven Kinder und keine offene Zähler-Verortung vorhanden sind. Bereits verortete Zähler und ihre Historie bleiben unangetastet.",
+        "loeschenAction": "Endgültig löschen",
+        "loeschenDialogTitel": "Standort endgültig löschen",
+        "loeschenDialogBeschreibung": "Unwiderruflich: Der Knoten wird vollständig entfernt (Korrektur einer Fehlanlage). Dies ist nur für Blattknoten ohne jede — auch historische — Zähler-Verortung möglich."
+      },
+      "zaehler": {
+        "form": {
+          "zaehlerId": "Zähler-ID",
+          "gueltigVon": "Gültig von",
+          "gueltigBis": "Gültig bis",
+          "errors": {
+            "zaehlerIdErforderlich": "Zähler-ID ist erforderlich.",
+            "zaehlerIdUngueltig": "Zähler-ID muss eine gültige UUID sein.",
+            "gueltigVonErforderlich": "Gültig-von-Datum ist erforderlich.",
+            "gueltigBisErforderlich": "Gültig-bis-Datum ist erforderlich."
+          }
+        },
+        "tabelle": {
+          "caption": "Aktuell an diesem Knoten verortete Zähler",
+          "id": "ID",
+          "geraetetyp": "Gerätetyp",
+          "energietraeger": "Energieträger",
+          "status": "Status",
+          "leer": "An diesem Knoten ist kein Zähler verortet. Zähler lassen sich über „Zähler zuordnen\" hier anhängen."
+        },
+        "verortenSectionTitle": "Zähler verorten",
+        "verortenAction": "Verorten",
+        "beendenSectionTitle": "Verortung beenden",
+        "beendenAction": "Beenden",
+        "verlaufSectionTitle": "Verlauf dieser Sitzung",
+        "verlaufZugeordnetPraefix": "Zugeordnet:",
+        "verlaufBeendetPraefix": "Beendet:"
+      },
+      "uebersicht": {
+        "pageTitle": "Standorte",
+        "auswahlSectionTitle": "Endkunde wählen",
+        "auswahlHinweis": "Wählen Sie einen Endkunden, um dessen Standort-/Gebäudestruktur und Verbrauchsdaten zu sehen.",
+        "auswaehlenAction": "Standorte anzeigen",
+        "andererEndkundeAction": "Anderen Endkunden wählen",
+        "keineEndkunden": "Es sind noch keine Endkunden angelegt — legen Sie zunächst einen Endkunden an."
+      }
+    },
+    "verbrauch": {
+      "sectionTitle": "Verbrauch",
+      "leer": "Im gewählten Zeitraum liegen keine Messwerte vor. Prüfen Sie den Zeitraum oder unter „Datenqualität & Störungen\", ob Daten ausbleiben.",
+      "filter": {
+        "von": "Von",
+        "bis": "Bis",
+        "aufloesung": "Auflösung",
+        "inklusiveUnterknoten": "Inkl. Unterknoten",
+        "zeitraumUngueltig": "„Von\" muss vor „Bis\" liegen."
+      },
+      "metadaten": {
+        "einbezogeneZaehler": "Einbezogene Zähler",
+        "einbezogeneKanaele": "Einbezogene Kanäle",
+        "untermessungenAusgelassenSuffix": "Untermessungen nicht mitgezählt (Teilmengen der Hauptmessung)",
+        "erkannteLuecken": "Erkannte Lücken",
+        "erkannteLueckenSuffix": "Lücken im Zeitraum",
+        "keineLuecken": "Keine Lücken im Zeitraum"
+      },
+      "ansichtWechsel": {
+        "ariaLabel": "Anzeigeform wählen",
+        "diagramm": "Diagramm",
+        "tabelle": "Tabelle"
+      },
+      "diagramm": {
+        "titelPraefix": "Verbrauch",
+        "legendeAriaLabel": "Legende der Messgrößen"
+      },
+      "tabelle": {
+        "caption": "Verbrauch je Zeitraum",
+        "zeitpunkt": "Zeitpunkt",
+        "messgroesse": "Messgröße",
+        "einheit": "Einheit",
+        "wert": "Wert",
+        "luecke": "Lücke"
+      },
+      "lastgang": {
+        "panelTitel": "Lastgang ansehen",
+        "zweckHinweis": "Der Rohverlauf ist zweckgebunden geschützt. Bitte Grund angeben — der Zugriff wird protokolliert.",
+        "tooltip": "Der Rohverlauf ist zweckgebunden geschützt. Bitte Grund angeben — der Zugriff wird protokolliert.",
+        "form": {
+          "von": "Von",
+          "bis": "Bis",
+          "submitAction": "Lastgang anzeigen",
+          "errors": {
+            "vonErforderlich": "Von-Datum ist erforderlich.",
+            "bisErforderlich": "Bis-Datum ist erforderlich.",
+            "vonNachBis": "„Von“ darf nicht nach „Bis“ liegen.",
+            "fensterZuGross": "Der Zeitraum darf höchstens 7 Tage umfassen."
+          }
+        },
+        "tabelle": {
+          "caption": "Rohwerte im gewählten Zeitraum",
+          "ts": "Zeitstempel",
+          "wert": "Wert",
+          "qualitaet": "Qualität",
+          "herkunft": "Herkunft"
+        }
+      }
+    },
+    "geraetAnbindung": {
+      "enums": {
+        "status": {
+          "aktiv": "angebunden",
+          "inaktiv": "beendet",
+          "geschreddert": "gelöscht"
+        }
+      },
+      "detail": {
+        "sectionTitle": "Geräte-Anbindung",
+        "angebundenSeit": "Angebunden seit",
+        "nichtAngebunden": "nicht angebunden",
+        "nichtAngebundenHinweis": "Dieser Zähler ist noch mit keinem Funkgerät verbunden. Ohne Anbindung kommen keine Messwerte an.",
+        "kennungHinweis": "Die Gerätekennung wird aus Datenschutzgründen nicht angezeigt. Zum Gerätetausch beenden Sie die Anbindung und legen anschließend die neue an.",
+        "anbindenAction": "Gerät anbinden",
+        "beendenAction": "Anbindung beenden",
+        "beendenErfolg": "Die Anbindung wurde beendet. Der Zähler kann jetzt mit einem anderen Gerät verbunden werden."
+      },
+      "form": {
+        "devEui": "Gerätekennung (DevEUI)",
+        "devEuiHinweis": "Die 16-stellige Kennung des Funkgeräts, wie sie im Netzserver steht. Trennzeichen dürfen mitgetippt werden.",
+        "errors": {
+          "devEuiErforderlich": "Bitte die Gerätekennung angeben.",
+          "devEuiZuLang": "Die Gerätekennung ist zu lang.",
+          "devEuiFormat": "Die Gerätekennung besteht aus 16 Zeichen (0–9, A–F), optional paarweise durch : oder - getrennt."
+        }
+      }
+    },
+    "herkunftMapping": {
+      "titel": "Herkunft der Geräte",
+      "beschreibung": "Übersetzt die Kennungen des Netzservers in Ihre Stammdaten: Ein Mandant entspricht einem Endkunden, eine Application einem Standort. Sobald ein Mandant zugeordnet ist, prüft die Aufnahme jede eingehende Nachricht dagegen — kommt ein Gerät aus einem Mandanten, der zu einem anderen Endkunden gehört als der angebundene Zähler, wird die Nachricht nicht eingespeist, sondern liegt im Arbeitsvorrat.",
+      "tabelle": {
+        "caption": "Zugeordnete Mandanten und Applications",
+        "tenant": "Mandant (Netzserver)",
+        "application": "Application (Netzserver)",
+        "endkunde": "Endkunde",
+        "standort": "Standort",
+        "quelle": "Netz",
+        "angelegt": "Zugeordnet am",
+        "aktion": "Aktion",
+        "entfernen": "Zuordnung entfernen",
+        "entferntLaeuft": "Wird entfernt …",
+        "entferntErfolg": "Zuordnung entfernt. Für diesen Mandanten wird die Herkunft ab sofort nicht mehr geprüft — Nachrichten werden wieder ungeprüft eingespeist.",
+        "leer": "Noch nichts zugeordnet. Solange ein Mandant fehlt, zeigt der Arbeitsvorrat nur die Kennung des Netzservers, und die Herkunft wird nicht geprüft. Legen Sie unten die erste Zuordnung an."
+      },
+      "standortTyp": {
+        "liegenschaft": "Liegenschaft",
+        "gebaeude": "Gebäude",
+        "bauteil": "Bauteil",
+        "etage": "Etage",
+        "einheit": "Einheit",
+        "raum": "Raum"
+      },
+      "formular": {
+        "titel": "Application zuordnen",
+        "absenden": "Zuordnung anlegen",
+        "erfolg": "Zuordnung angelegt. Eingehende Nachrichten aus diesem Mandanten werden ab sofort geprüft.",
+        "tenant": "Mandanten-Kennung",
+        "tenantHinweis": "Die Kennung des Mandanten im Netzserver, zu dem das Gerät dort gehört.",
+        "application": "Application-Kennung",
+        "applicationHinweis": "Die Kennung der Application im Netzserver — dort meist ein Gebäude.",
+        "endkunde": "Endkunde",
+        "endkundeHinweis": "Der Endkunde, dem dieser Mandant entspricht. Ein Mandant gehört zu genau einem Endkunden.",
+        "standort": "Standort",
+        "standortHinweis": "Der Standort, dem diese Application entspricht. Er muss zum gewählten Endkunden gehören.",
+        "quelle": "Netz",
+        "quelleHinweis": "Aus welchem Netzserver diese Zuordnung stammt. Leer lassen, wenn Sie nur einen betreiben — dann wird die Kennung dieser Installation übernommen.",
+        "quelleCodeUngueltig": "Erlaubt sind Kleinbuchstaben, Ziffern, Unterstrich und Bindestrich (höchstens 63 Zeichen).",
+        "uuidUngueltig": "Bitte eine vollständige Kennung eingeben (36 Zeichen, Form 8-4-4-4-12)."
+      }
+    },
+    "ingestBetrieb": {
+      "pageTitle": "Datenaufnahme",
+      "einfuehrung": "Zeigt, ob Messwerte hereinkommen und was dabei liegen bleibt. Der Reiter „Arbeitsvorrat\" nennt zu jedem liegengebliebenen Fall den nächsten Schritt.",
+      "tabsAriaLabel": "Bereiche der Datenaufnahme",
+      "tabs": {
+        "ueberblick": "Überblick",
+        "arbeitsvorrat": "Arbeitsvorrat",
+        "quellen": "Datenquellen",
+        "herkunft": "Herkunft der Geräte"
+      },
+      "quellen": {
+        "sectionTitle": "Netzserver",
+        "einfuehrung": "Auf welchen Broker und welches Topic die Aufnahme hört — und ob sie dort gerade zuhört.",
+        "keine": "Es hat sich noch kein Aufnahme-Prozess gemeldet. Die Messdaten-Aufnahme läuft nicht.",
+        "lebendig": "verbunden",
+        "nichtLebendig": "keine Verbindung",
+        "nichtVerbunden": "Der Aufnahme-Prozess läuft, erreicht den Broker aber nicht. Prüfen Sie Broker, Zugangsdaten und Netzweg.",
+        "herzschlagVeraltet": "Der Aufnahme-Prozess meldet sich nicht mehr. Er ist vermutlich beendet oder abgestürzt.",
+        "broker": "Broker",
+        "topic": "Topic",
+        "clientId": "Client-Id",
+        "letzterHerzschlag": "Letzte Meldung",
+        "nichtGepflegt": "Für diese Kennung ist keine Datenquelle gepflegt — der Prozess arbeitet mit Werten aus seiner Umgebung. Legen Sie eine Quelle mit dieser Kennung an, damit die Konfiguration hier sichtbar wird.",
+        "deaktiviertLaeuftNoch": "Die gepflegte Quelle ist deaktiviert, dieser Prozess läuft aber noch: Er liest seine Konfiguration nur beim Start. Beim nächsten Neustart bleibt er stehen.",
+        "abweichend": "Der laufende Prozess arbeitet mit einer anderen Konfiguration als der gepflegten. Sie wirkt erst nach einem Neustart des Workers. Abweichend:"
+      },
+      "status": {
+        "sectionTitle": "Zuletzt passiert",
+        "letzteSchreibung": "Zuletzt geschrieben",
+        "letzterMesswert": "Jüngster Messzeitpunkt",
+        "letzteQuarantaene": "Zuletzt aussortiert",
+        "nochNie": "noch nie",
+        "nochNieHinweis": "Es wurde noch kein einziger Messwert geschrieben. Entweder sendet noch kein Gerät, oder die Aufnahme läuft nicht.",
+        "verbindungHinweis": "Ob die Verbindung zum Netzserver in diesem Moment steht, lässt sich hier nicht ablesen. Ein länger zurückliegender Schreibzeitpunkt ist das verlässliche Zeichen für einen Stillstand.",
+        "quarantaeneSectionTitle": "Liegengeblieben",
+        "quarantaeneGesamt": "Insgesamt",
+        "quarantaeneLeer": "Nichts liegengeblieben — alle empfangenen Nachrichten wurden verarbeitet."
+      },
+      "tabelle": {
+        "caption": "Liegengebliebene Nachrichten",
+        "leer": "Nichts liegengeblieben. Sobald eine Nachricht nicht verarbeitet werden kann, erscheint sie hier mit ihrem Grund.",
+        "leerGefiltert": "Zu diesem Grund liegt nichts vor.",
+        "grund": "Grund",
+        "zaehlerId": "Zähler",
+        "quelle": "Netzserver",
+        "application": "Application",
+        "fPort": "Port",
+        "topic": "Topic",
+        "empfangenAt": "Empfangen",
+        "ohneBezug": "—",
+        "zaehlerOeffnen": "Zähler öffnen",
+        "filterGrund": "Grund",
+        "filterAlle": "Alle Gründe",
+        "vorhandeneMessgroessen": "Am Zähler geführt:"
+      },
+      "gruende": {
+        "devEUI_unbekannt": {
+          "titel": "Gerät nicht zugeordnet",
+          "hinweis": "Das Gerät sendet, ist aber keinem Zähler angebunden. Legen Sie den Zähler an und binden Sie das Gerät auf seiner Detailseite an."
+        },
+        "unbekannter_geraetetyp": {
+          "titel": "Gerätetyp nicht auswertbar",
+          "hinweis": "Für den am Zähler eingetragenen Gerätetyp ist keine Auswertung hinterlegt. Prüfen Sie die Schreibweise des Gerätetyps am Zähler."
+        },
+        "decode_fehler": {
+          "titel": "Nutzdaten nicht auswertbar",
+          "hinweis": "Die Auswertung kam mit dem Inhalt nicht zurecht. Häufig sendet das Gerät auf einem Port, für den nichts hinterlegt ist."
+        },
+        "kanal_unbekannt": {
+          "titel": "Kein passender Messkanal",
+          "hinweis": "Der Wert kam an, aber am Zähler gibt es keinen Kanal für die gemeldete Messgröße. Die Schreibweise muss exakt übereinstimmen — vergleichen Sie zuerst mit den unten aufgeführten Messgrößen des Zählers, bevor Sie einen neuen Kanal anlegen."
+        },
+        "einheit_inkonsistent": {
+          "titel": "Einheit passt nicht",
+          "hinweis": "Der Messkanal erwartet eine andere Einheit als geliefert wurde. Prüfen Sie die Einheit am Messkanal."
+        },
+        "unplausibel_monotonie_verletzt": {
+          "titel": "Wert unplausibel",
+          "hinweis": "Ein Zählerstand ist gesunken oder liegt außerhalb des erwarteten Bereichs. Nach einem Gerätetausch ist das erwartbar und der Zählerstand muss nachgeführt werden."
+        },
+        "zeitstempel_fehlt": {
+          "titel": "Kein brauchbarer Zeitstempel",
+          "hinweis": "Die Nachricht trug keinen verwertbaren Zeitpunkt oder lag außerhalb des zulässigen Fensters. Prüfen Sie die Uhrzeit des Geräts."
+        },
+        "herkunft_widerspruechlich": {
+          "titel": "Gerät gehört zu einem anderen Endkunden",
+          "hinweis": "Der Netzserver ordnet dieses Gerät einem anderen Endkunden zu als der angebundene Zähler. Die Nachricht wurde NICHT eingespeist. Prüfen Sie, ob das Gerät im Netzserver umgehängt wurde oder die Zuordnung im EDMS veraltet ist."
+        },
+        "skalensprung_verdacht": {
+          "titel": "Zählerstand springt — Umrechnung geändert?",
+          "hinweis": "Der Zählerstand ist um einen Betrag gestiegen, den kein Verbrauch erklärt. Das Muster passt zu einer geänderten Umrechnung im Netzserver, etwa einem neuen Wandlerfaktor. Die Nachricht wurde NICHT eingespeist. Prüfen Sie die Geräteeinstellung im Netzserver; wurde dort nichts geändert, ist der Wert selbst zu klären."
+        },
+        "envelope_parse_fehler": {
+          "titel": "Nachricht nicht lesbar",
+          "hinweis": "Die Nachricht war nicht als Uplink lesbar. Meist sendet ein fremdes Gerät auf demselben Topic, oder das Topic-Muster passt nicht."
+        }
+      }
+    },
+    "berechnung": {
+      "enums": {
+        "messkonzeptTyp": {
+          "vereinfacht": "vereinfacht — Koeffizienten gesetzt",
+          "standard": "Standard — an Vermessung angepasst",
+          "alternativ": "alternativ — an Vermessung angepasst"
+        }
+      },
+      "uebersicht": {
+        "pageTitle": "Verbrauch & Einsparung",
+        "einfuehrung": "Zeigt die monatlichen Berechnungen eines Endkunden: die witterungsbereinigte Referenz aus der Baseline und den tatsächlichen Verbrauch. Wählen Sie zunächst den Endkunden.",
+        "auswahlSectionTitle": "Endkunde auswählen",
+        "auswahlHinweis": "Die Berechnungen liegen je Endkunde vor. Wählen Sie den Endkunden, dessen Läufe Sie ansehen möchten.",
+        "auswaehlenAction": "Auswählen",
+        "andererEndkundeAction": "Anderen Endkunden wählen",
+        "keineEndkunden": "Noch kein Endkunde angelegt. Berechnungen entstehen erst, wenn für einen Endkunden Messkonzept, Zähler und Messwerte vorliegen.",
+        "nachweisHinweis": "Für den Nachweis gegenüber der Bewilligungsbehörde werden diese Berechnungen je Förderjahr zusammengefasst.",
+        "zumNachweisAction": "Zu den Förderjahren"
+      },
+      "listPage": {
+        "title": "Berechnungsläufe",
+        "backAction": "Zurück zum Endkunden",
+        "anlegenAction": "Berechnung starten"
+      },
+      "tabelle": {
+        "caption": "Berechnungsläufe dieses Endkunden",
+        "periode": "Periode",
+        "energietraeger": "Energieträger",
+        "qualitaet": "Qualität",
+        "erstelltAt": "Erstellt am",
+        "leer": "Für diesen Endkunden liegen noch keine Berechnungsläufe vor.",
+        "detailsAnzeigen": "Details anzeigen"
+      },
+      "detailPage": {
+        "title": "Berechnungslauf-Detail"
+      },
+      "detail": {
+        "id": "Lauf-ID",
+        "endkundeId": "Endkunde",
+        "mvetId": "Messkonzept-Energieträger-ID",
+        "energietraeger": "Energieträger",
+        "verfahren": "Verfahren",
+        "periode": "Zeitraum",
+        "messkonzeptTyp": "Messkonzept",
+        "baselineWertKwh": "Baseline-Wert",
+        "grundlastAnteil": "Grundlastanteil (g)",
+        "gtzBase": "Gradtagzahl Baseline (GTZ_base)",
+        "gtzNorm": "Gradtagzahl Norm (GTZ_norm)",
+        "baselineNormKwh": "Baseline (Normperiode)",
+        "gueteR2": "Modellgüte R²",
+        "gueteCvRmse": "Streuung CV(RMSE)",
+        "gueteNmbe": "Systematischer Versatz (NMBE)",
+        "guetePunkte": "Monatspunkte der Vermessung",
+        "baselineAbweichung": "Abweichung zur erfassten Baseline",
+        "qualitaetsStufeMin": "Datenqualität (Minimum)",
+        "ausloeser": "Ausgelöst durch",
+        "ersetztLaufId": "Ersetzt Lauf",
+        "erstelltAt": "Erstellt am",
+        "keineAngabe": "keine Angabe",
+        "monatswerteSectionTitle": "Monatswerte",
+        "neuberechnung": {
+          "action": "Neu rechnen",
+          "hinweis": "Rechnet diesen Zeitraum mit denselben Parametern erneut — nötig, wenn sich die Datenlage geändert hat (nachgetragene Messwerte, korrigierte Stammdaten).",
+          "dialogTitel": "Diesen Lauf neu rechnen?",
+          "dialogText": "Der neue Lauf ersetzt diesen hier und wird ab dann für Nachweis und Monatsbericht herangezogen. Dieser Lauf bleibt erhalten und bleibt einsehbar — überschrieben wird nichts. Messkonzept, Zeitraum, Grundlastanteil, Klimastation und Gradtagzahlen werden unverändert übernommen; neu ist allein die Datenlage.",
+          "dialogBestaetigen": "Jetzt neu rechnen",
+          "dialogAbbrechen": "Abbrechen",
+          "ersetztHinweis": "Dieser Lauf wurde durch einen neueren ersetzt und ist nicht mehr maßgeblich. Eine weitere Korrektur gehört an den neuesten Lauf.",
+          "erfolg": "Neu gerechnet. Sie sehen jetzt den Korrekturlauf."
+        },
+        "backAction": "Zurück zur Liste"
+      },
+      "monatstabelle": {
+        "caption": "Monatswerte des Berechnungslaufs",
+        "monat": "Monat",
+        "referenz": "Referenz R_m",
+        "ist": "Ist",
+        "einsparung": "Einsparung",
+        "abdeckung": "Abdeckung",
+        "qualitaet": "Qualität",
+        "leer": "Keine Monatswerte vorhanden."
+      },
+      "diagramm": {
+        "titel": "Referenz vs. Ist je Monat",
+        "serieReferenz": "Referenz (R_m)",
+        "serieIst": "Ist",
+        "legendeAriaLabel": "Legende der Diagrammserien"
+      },
+      "bilanz": {
+        "sectionTitle": "Ergebnis des Zeitraums",
+        "erlaeuterung": "Die Einsparung ist die Differenz aus der witterungsbereinigten Referenz und dem tatsächlichen Verbrauch. Positiv bedeutet eingespart, negativ mehr verbraucht als erwartet.",
+        "referenz": "Referenz (erwartet)",
+        "ist": "Tatsächlicher Verbrauch",
+        "einsparung": "Einsparung",
+        "mehrverbrauchHinweis": "In diesem Zeitraum wurde mehr verbraucht als die Referenz erwarten ließ."
+      },
+      "anlegenPage": {
+        "title": "Berechnung starten",
+        "backAction": "Zurück zu den Berechnungsläufen"
+      },
+      "anlegen": {
+        "titel": "Neuer Berechnungslauf",
+        "beschreibung": "Der Lauf bereinigt den gemessenen Verbrauch um die Witterung und stellt ihn der Baseline gegenüber. Die Parameter sind aus dem Bestand vorgeschlagen — prüfen Sie sie, bevor Sie rechnen.",
+        "ladeFehler": "Das Messkonzept konnte nicht geladen werden.",
+        "keinMesskonzept": "Für diesen Endkunden ist keine gültige Messkonzept-Version mit Energieträger hinterlegt. Ohne Messkonzept gibt es keine Baseline und damit nichts zu rechnen.",
+        "energietraegerLabel": "Energieträger",
+        "energietraegerPlatzhalter": "Bitte wählen",
+        "energietraegerHinweis": "Ein Lauf je Energieträger. Strom und Wärme haben eigene Baselines, eigene Zähler und einen völlig verschiedenen Grundlastanteil.",
+        "vorschlagLaedt": "Vorschlag wird ermittelt …",
+        "periodeVonLabel": "Zeitraum von",
+        "periodeBisLabel": "Zeitraum bis (ausschließlich)",
+        "periodeHinweis": "Beide Angaben müssen Monatsanfänge sein; „bis\" ist der erste Tag NACH dem letzten gerechneten Monat. Vorgeschlagen sind die vollständig gemessenen Monate — ein angeschnittener Monat zählt jeden fehlenden Tag gegen seine Abdeckung.",
+        "datenSpannePraefix": "Messdaten liegen vor von",
+        "grundlastLabel": "Grundlastanteil (0 bis 1)",
+        "grundlastHerleitungPraefix": "Hergeleitet: Sommermittel",
+        "grundlastHerleitungMitte": "geteilt durch Jahresmittel",
+        "kwhProTag": "kWh/Tag",
+        "grundlastBasisPraefix": "Grundlage:",
+        "tage": "Tage",
+        "sommertage": "davon Sommertage",
+        "basisBaseline": "aus den erfassten Baseline-Bezugszeiträumen.",
+        "basisErsteMessdaten": "ersatzweise aus dem ersten Jahr der Messreihe — das muss nicht das Baselinejahr sein. Erfassen Sie die Baseline-Bezugszeiträume, dann wird der Vorschlag belastbar.",
+        "nichtWitterungsgefuehrt": "Der Sommerverbrauch liegt nicht unter dem Jahresmittel: Dieser Verbrauch folgt der Heizwitterung nicht (etwa Kühlung und Beleuchtung). Der Vorschlag ist deshalb 1 — die ganze Baseline gilt als Grundlast.",
+        "grundlastOhneHerleitung": "Für diesen Energieträger lässt sich kein Grundlastanteil herleiten — es fehlen Messdaten oder Sommertage im Bezugszeitraum. Ein von Hand gesetzter Wert ist dann eine Schätzung und sollte begründet werden.",
+        "abweichendVomVorschlag": "Der eingetragene Wert weicht vom Vorschlag ab.",
+        "vorschlagUebernehmen": "Vorschlag übernehmen",
+        "stationLabel": "Klimastation",
+        "stationHinweis": "Die Kennung, unter der die Wetterdaten geführt werden. Sie wird im Lauf eingefroren; eine spätere Änderung wirkt nicht rückwirkend. Vorgeschlagen sind die für diesen Kunden bereits verwendeten.",
+        "absenden": "Berechnung starten",
+        "rechnetLaeuft": "Wird gerechnet …",
+        "synchronHinweis": "Der Lauf rechnet sofort und kann bei einem mehrjährigen Zeitraum einen Moment dauern. Danach öffnet sich das Ergebnis.",
+        "hindernis": {
+          "keineBaseline": "Am Messkonzept ist kein Baseline-Wert hinterlegt. Ohne ihn gibt es nichts, wogegen der Verbrauch gestellt werden könnte.",
+          "einheitNichtVerwertbar": "Die Baseline ist nicht in kWh erfasst. Der Lauf rechnet keine Einheiten um — er würde abbrechen.",
+          "keineZaehler": "Zu diesem Energieträger ist kein aktiver Zähler vorhanden. Der Lauf hätte nichts zu messen.",
+          "keineDaten": "Für diese Zähler liegen keine Messwerte vor. Ein Lauf ergäbe lauter leere Monate.",
+          "gtzBaseFehlt": "Es ist kein Baseline-Bezugszeitraum erfasst. Die Gradtagzahl der Bezugsjahre lässt sich daraus nicht ableiten, und der Lauf bricht ab. Erfassen Sie die Bezugszeiträume am Messkonzept — oder setzen Sie den Grundlastanteil auf 1, wenn dieser Verbrauch der Witterung gar nicht folgt.",
+          "systemgrenzeFallback": "Für diesen Energieträger ist keine Systemgrenze gepflegt. Der Lauf zöge deshalb ALLE aktiven Zähler dieses Kunden mit diesem Energieträger heran — bei mehreren Messkonzepten fließt dabei fremder Verbrauch ein. Rechnen ist möglich, aber prüfen Sie die Zuordnung.",
+          "grundlastWirdAngepasst": "Dieses Messkonzept ist als Standard oder Alternativ geführt. Der Grundlastanteil wird dort nicht eingegeben, sondern aus den erfassten Baseline-Perioden ermittelt — der Wert im Feld unten geht nicht in die Rechnung ein. Im Ergebnis steht der ermittelte Anteil, zusammen mit der Modellgüte.",
+          "stationNurAusLaeufen": "Am Standort ist keine Klimastation hinterlegt. Die Vorschläge stammen daher nur aus früheren Läufen dieses Kunden — die wiederholen zuverlässig auch eine falsche Station. Die Station gehört an den Standort; prüfen Sie sie, bevor Sie rechnen."
+        }
+      }
+    },
+    "einflussgroesse": {
+      "zugriffVerweigert": "Kein Zugriff — Einflussgrößen sind ausschließlich für das Betriebs-Team sichtbar.",
+      "listPage": {
+        "title": "Einflussgrößen",
+        "createAction": "Einflussgröße erfassen",
+        "backAction": "Zurück zum System"
+      },
+      "liste": {
+        "hinweisVorAnzeige": "Die Klartext-Werte (z. B. Personenzahl, Nutzfläche) werden erst nach Bestätigung geladen — jeder Aufruf wird protokolliert.",
+        "anzeigenAction": "Einflussgrößen anzeigen",
+        "klartextHinweis": "Auditierte Klartext-Einsicht (Betriebs-Team) — dieser Aufruf wurde protokolliert.",
+        "caption": "Einflussgrößen-Intervalle des Systems",
+        "leer": "Keine Einflussgrößen erfasst.",
+        "korrigierenAction": "Korrigieren"
+      },
+      "tabelle": {
+        "id": "ID",
+        "groesse": "Größe",
+        "wert": "Wert",
+        "gueltigAbMonat": "Gültig ab",
+        "gueltigBisMonat": "Gültig bis",
+        "betroffenerTyp": "Betroffene Person",
+        "quelleTyp": "Quelle",
+        "rechtsgrundlage": "Rechtsgrundlage",
+        "anlassCode": "Anlass"
+      },
+      "detail": {
+        "gueltigBisAktuell": "aktuell (kein Enddatum)"
+      },
+      "createPage": {
+        "title": "Einflussgröße erfassen",
+        "submitAction": "Erfassen"
+      },
+      "korrigierenSection": {
+        "title": "Einflussgröße korrigieren",
+        "submitAction": "Korrigieren"
+      },
+      "katalog": {
+        "nutzungszweck": "Nutzungszweck",
+        "energietraegerMix": "Energieträger-Mix",
+        "personenanzahl": "Personenanzahl",
+        "nutzflaeche": "Nutzfläche",
+        "geraeteabschaffung": "Geräteabschaffung"
+      },
+      "nutzungszweck": {
+        "wohnen": "Wohnen",
+        "buero": "Büro",
+        "handel": "Handel",
+        "produktion": "Produktion",
+        "lager": "Lager",
+        "sonstige": "Sonstige"
+      },
+      "form": {
+        "groesseCode": "Größe",
+        "groesseCodePlatzhalter": "Bitte wählen",
+        "wertNum": "Wert (numerisch)",
+        "wertNumHinweis": "Nur bei numerischen Größen (Personenanzahl, Nutzfläche) ausfüllen.",
+        "wertCode": "Wert (Code)",
+        "wertCodeHinweis": "Nur bei codierten Größen ausfüllen. Bei Nutzungszweck: wohnen, buero, handel, produktion, lager oder sonstige.",
+        "gueltigAbMonat": "Gültig ab",
+        "gueltigAbMonatHinweis": "Der Tag wird ignoriert — es gilt der Monatsanfang.",
+        "gueltigBisMonat": "Gültig bis (optional)",
+        "gueltigBisMonatHinweis": "Der Tag wird ignoriert — es gilt der Monatsanfang. Leer lassen für ein unbefristetes Intervall.",
+        "gueltigBisMonatSchliessen": "Gültig bis (schließt dieses Intervall)",
+        "betroffenerTyp": "Betroffene Person",
+        "betroffenerTypPlatzhalter": "Bitte wählen",
+        "quelleTyp": "Quelle",
+        "quelleTypPlatzhalter": "Bitte wählen",
+        "rechtsgrundlage": "Rechtsgrundlage",
+        "rechtsgrundlagePlatzhalter": "Bitte wählen",
+        "abwaegungRef": "Interessenabwägung (Referenz)",
+        "abwaegungRefHinweis": "Verweis auf die dokumentierte Interessenabwägung (LIA) — Pflicht bei Anschlussnutzer als betroffener Person.",
+        "art14InformationAt": "Art.-14-Information erteilt am",
+        "art14InformationAtHinweis": "Pflicht bei Anschlussnutzer als betroffener Person (Art. 14 DSGVO).",
+        "standortId": "Standort-ID (optional)",
+        "standortIdHinweis": "Nur wenn an diesem Standort gemessen wird — dort muss im Zeitraum eine aktive Zähler-Verortung bestehen.",
+        "anlassCode": "Anlass (optional)",
+        "anlassCodePlatzhalter": "Bitte wählen",
+        "korrekturHinweis": "Nur ausfüllen, wenn zusätzlich zum Schließen eine neue Korrektur-Zeile angelegt werden soll — sonst leer lassen.",
+        "korrekturGueltigAbMonat": "Korrektur: Gültig ab (nur bei neuer Korrektur-Zeile)",
+        "korrekturWertNum": "Korrektur: Wert (numerisch)",
+        "korrekturWertCode": "Korrektur: Wert (Code)",
+        "korrekturGueltigBisMonat": "Korrektur: Gültig bis (optional)",
+        "korrekturBetroffenerTyp": "Korrektur: Betroffene Person",
+        "korrekturQuelleTyp": "Korrektur: Quelle",
+        "korrekturRechtsgrundlage": "Korrektur: Rechtsgrundlage",
+        "korrekturAbwaegungRef": "Korrektur: Interessenabwägung (Referenz)",
+        "korrekturArt14InformationAt": "Korrektur: Art.-14-Information erteilt am",
+        "korrekturStandortId": "Korrektur: Standort-ID (optional)",
+        "errors": {
+          "groesseCodeErforderlich": "Größe ist erforderlich.",
+          "wertNumUngueltig": "Wert (numerisch) muss eine Zahl ≥ 0 sein.",
+          "wertNumErforderlich": "Wert (numerisch) ist bei dieser Größe erforderlich.",
+          "wertNumNichtZulaessig": "Wert (numerisch) ist bei dieser Größe nicht zulässig.",
+          "wertCodeZuLang": "Wert (Code) darf höchstens 64 Zeichen haben.",
+          "wertCodeErforderlich": "Wert (Code) ist bei dieser Größe erforderlich.",
+          "wertCodeNichtZulaessig": "Wert (Code) ist bei dieser Größe nicht zulässig.",
+          "wertCodeNutzungszweckUngueltig": "Wert (Code) muss bei Nutzungszweck einer der Werte wohnen/buero/handel/produktion/lager/sonstige sein.",
+          "gueltigAbMonatErforderlich": "Gültig ab ist erforderlich.",
+          "gueltigBisVorAb": "Gültig bis muss nach Gültig ab liegen.",
+          "betroffenerTypErforderlich": "Betroffene Person ist erforderlich.",
+          "quelleTypErforderlich": "Quelle ist erforderlich.",
+          "rechtsgrundlageErforderlich": "Rechtsgrundlage ist erforderlich.",
+          "rechtsgrundlageArt14": "Bei Anschlussnutzer als betroffener Person muss die Rechtsgrundlage Art. 6 Abs. 1 lit. f sein.",
+          "rechtsgrundlageEndkundeArt6b": "Für einen Endkunden ist nur Art. 6 Abs. 1 lit. b zulässig (Erforderlichkeit für die Förderteilnahme).",
+          "abwaegungRefZuLang": "Interessenabwägung (Referenz) darf höchstens 256 Zeichen haben.",
+          "abwaegungRefErforderlich": "Interessenabwägung (Referenz) ist bei Anschlussnutzer als betroffener Person erforderlich.",
+          "art14InformationAtErforderlich": "Art.-14-Information ist bei Anschlussnutzer als betroffener Person erforderlich.",
+          "standortIdUngueltig": "Standort-ID muss eine gültige UUID sein.",
+          "gueltigBisMonatErforderlich": "Gültig bis ist erforderlich.",
+          "korrekturGueltigBisVorAb": "Korrektur: Gültig bis muss nach Korrektur: Gültig ab liegen.",
+          "korrekturBetroffenerTypErforderlich": "Korrektur: Betroffene Person ist erforderlich.",
+          "korrekturQuelleTypErforderlich": "Korrektur: Quelle ist erforderlich.",
+          "korrekturRechtsgrundlageErforderlich": "Korrektur: Rechtsgrundlage ist erforderlich.",
+          "korrekturWertNumErforderlich": "Korrektur: Wert (numerisch) ist bei dieser Größe erforderlich.",
+          "korrekturWertNumNichtZulaessig": "Korrektur: Wert (numerisch) ist bei dieser Größe nicht zulässig.",
+          "korrekturWertCodeErforderlich": "Korrektur: Wert (Code) ist bei dieser Größe erforderlich.",
+          "korrekturWertCodeNichtZulaessig": "Korrektur: Wert (Code) ist bei dieser Größe nicht zulässig.",
+          "korrekturWertXorErforderlich": "Korrektur: Es darf genau einer der beiden Werte (numerisch oder Code) gesetzt sein.",
+          "korrekturRechtsgrundlageArt14": "Korrektur: Bei Anschlussnutzer als betroffener Person muss die Rechtsgrundlage Art. 6 Abs. 1 lit. f sein.",
+          "korrekturAbwaegungRefErforderlich": "Korrektur: Interessenabwägung (Referenz) ist bei Anschlussnutzer als betroffener Person erforderlich.",
+          "korrekturArt14InformationAtErforderlich": "Korrektur: Art.-14-Information ist bei Anschlussnutzer als betroffener Person erforderlich."
+        }
+      }
+    },
+    "ingestQuelle": {
+      "pageTitle": "Datenquellen",
+      "enums": {
+        "tlsModus": {
+          "kein_tls": "Unverschlüsselt",
+          "tls": "TLS",
+          "mtls": "TLS mit Client-Zertifikat"
+        },
+        "status": {
+          "aktiv": "Aktiv",
+          "inaktiv": "Inaktiv"
+        },
+        "geheimnis": {
+          "benutzername": "Benutzername",
+          "passwort": "Passwort",
+          "ca_zertifikat": "CA-Zertifikat",
+          "client_zertifikat": "Client-Zertifikat",
+          "client_schluessel": "Privater Schlüssel"
+        }
+      },
+      "tabelle": {
+        "caption": "Gepflegte Datenquellen",
+        "einfuehrung": "Hier steht, von welchen Brokern dieses System Messwerte entgegennimmt. Ein Ingest-Worker lädt seine Konfiguration über die Kennung der Quelle; Änderungen wirken, sobald er neu startet.",
+        "bezeichnung": "Bezeichnung und Kennung",
+        "broker": "Broker und Topic",
+        "tls": "Verbindung",
+        "geheimnisse": "Hinterlegt",
+        "status": "Status",
+        "keineGeheimnisse": "Keine Zugangsdaten hinterlegt",
+        "leer": "Noch keine Datenquelle angelegt. Legen Sie eine an, damit ein Ingest-Worker weiß, wo er zuhören soll.",
+        "ladeFehler": "Die Datenquellen konnten nicht geladen werden.",
+        "aktivieren": "Aktivieren",
+        "deaktivieren": "Deaktivieren",
+        "statusErfolg": "Der Status wurde geändert. Ein laufender Worker übernimmt ihn beim nächsten Start.",
+        "zertifikat": "Zertifikat",
+        "zertifikatGueltigBis": "Gültig bis",
+        "zertifikatLaeuftAb": "Läuft ab in",
+        "tage": "Tagen",
+        "zertifikatAbgelaufen": "Abgelaufen — keine Verbindung möglich",
+        "zertifikatHinweis": "Mindestens ein Client-Zertifikat ist abgelaufen oder läuft demnächst ab. Läuft es ab, verweigert der Broker die Verbindung und es kommen keine Messwerte mehr an — ohne weitere Meldung. Spielen Sie rechtzeitig ein neues ein."
+      },
+      "form": {
+        "titel": "Datenquelle anlegen",
+        "beschreibung": "Eine Datenquelle ist ein MQTT-Broker, von dem dieses System Messwerte entgegennimmt. Zugangsdaten und Zertifikate werden verschlüsselt abgelegt und danach nicht mehr angezeigt.",
+        "action": "Datenquelle anlegen",
+        "aufklapper": "Neue Datenquelle",
+        "erfolg": "Die Datenquelle wurde angelegt. Damit ein Worker sie benutzt, starten Sie ihn mit dieser Kennung.",
+        "quelleCode": "Kennung",
+        "quelleCodeHinweis": "Über diese Kennung lädt ein Ingest-Worker seine Konfiguration. Kleinbuchstaben, Ziffern, Bindestrich und Unterstrich. Später nicht mehr änderbar.",
+        "bezeichnung": "Bezeichnung",
+        "bezeichnungHinweis": "Ein Name, unter dem Ihr Team diese Quelle wiedererkennt.",
+        "brokerHost": "Broker-Adresse",
+        "brokerHostHinweis": "Nur Host oder Host:Port, zum Beispiel mqtt.example.org:8883. Zugangsdaten gehören in die Felder darunter.",
+        "topic": "Topic",
+        "topicHinweis": "Das abonnierte Uplink-Topic. Die Vorgabe passt zur Standard-Einstellung von ChirpStack; ein abweichendes Muster führt dazu, dass nichts ankommt.",
+        "clientId": "Client-Kennung",
+        "clientIdHinweis": "Die MQTT-Client-Kennung dieses Workers. Zwei Prozesse mit derselben Kennung verdrängen sich gegenseitig.",
+        "tlsModus": "Verbindung",
+        "tlsModusHinweis": "Unverschlüsselt ist nur für einen lokalen Testbroker vertretbar.",
+        "benutzername": "Benutzername",
+        "benutzernameHinweis": "Leer lassen, wenn der Broker keine Anmeldung verlangt.",
+        "passwort": "Passwort",
+        "passwortHinweis": "Wird verschlüsselt abgelegt und danach nicht mehr angezeigt — auch nicht gekürzt.",
+        "caZertifikat": "CA-Zertifikat",
+        "caZertifikatHinweis": "PEM-Block. Nötig, wenn der Broker ein Zertifikat verwendet, dem Ihr System nicht ohnehin vertraut.",
+        "clientZertifikat": "Client-Zertifikat",
+        "clientZertifikatHinweis": "PEM-Block. Pflicht, wenn die Verbindung ein Client-Zertifikat verlangt.",
+        "clientSchluessel": "Privater Schlüssel",
+        "clientSchluesselHinweis": "PEM-Block, der zum Client-Zertifikat gehört. Wird verschlüsselt abgelegt und nie wieder angezeigt.",
+        "notiz": "Notiz",
+        "notizHinweis": "Platz für einen Hinweis an Ihr Team, etwa wer diesen Broker betreibt.",
+        "errors": {
+          "codeErforderlich": "Bitte geben Sie eine Kennung an.",
+          "codeForm": "Erlaubt sind Kleinbuchstaben, Ziffern, Bindestrich und Unterstrich; das erste Zeichen muss ein Buchstabe oder eine Ziffer sein.",
+          "bezeichnungErforderlich": "Bitte geben Sie eine Bezeichnung an.",
+          "bezeichnungZuLang": "Die Bezeichnung darf höchstens 200 Zeichen haben.",
+          "brokerErforderlich": "Bitte geben Sie die Broker-Adresse an.",
+          "brokerForm": "Nur Host oder Host:Port. Zugangsdaten gehören in die Felder Benutzername und Passwort.",
+          "topicErforderlich": "Bitte geben Sie ein Topic an.",
+          "clientIdErforderlich": "Bitte geben Sie eine Client-Kennung an.",
+          "pemForm": "Erwartet wird ein PEM-Block, der mit -----BEGIN beginnt und mit -----END endet.",
+          "mtlsZertifikat": "Für eine Verbindung mit Client-Zertifikat wird das Zertifikat benötigt.",
+          "mtlsSchluessel": "Für eine Verbindung mit Client-Zertifikat wird auch der private Schlüssel benötigt.",
+          "passwortBrauchtBenutzer": "Ein Passwort ohne Benutzername kann der Broker nicht prüfen."
+        }
+      }
+    }
+  },
+  "nachweis": {
+    "brotkrume": {
+      "foerderjahre": "Förderjahre",
+      "preflight": "Vollständigkeitsprüfung",
+      "einsparlaeufe": "Einspar-Läufe",
+      "export": "Nachweis-Export",
+      "einreichung": "Einreichung",
+      "neu": "Neu"
+    },
+    "enums": {
+      "definitionQuelle": {
+        "kalenderjahr": "Kalenderjahr",
+        "bewilligungszeitraum": "Bewilligungszeitraum"
+      },
+      "preflightErgebnis": {
+        "gruen": "grün",
+        "rot": "rot"
+      },
+      "preflightSchwere": {
+        "blocker": "Blocker",
+        "warnung": "Warnung",
+        "hinweis": "Hinweis"
+      },
+      "einsparlaufArt": {
+        "foerderjahr_nachweis": "Förderjahr-Nachweis",
+        "zwischenstand": "Zwischenstand"
+      },
+      "einsparlaufAusloeser": {
+        "manuell": "manuell",
+        "job": "automatisch (Job)",
+        "korrektur": "Korrektur"
+      },
+      "ergebnisStatus": {
+        "ausgewiesen": "ausgewiesen",
+        "nicht_nachweisbar": "nicht nachweisbar",
+        "ausgeschlossen": "ausgeschlossen"
+      },
+      "ausschlussGrund": {
+        "datenschutzrechtliche_einschraenkung": "datenschutzrechtliche Einschränkung",
+        "energietraeger_substitution_v1_nicht_unterstuetzt": "Energieträger-Substitution",
+        "nicht_nachweisbar": "nicht nachweisbar"
+      },
+      "jahresQualitaetsStufe": {
+        "belastbar": "belastbar",
+        "eingeschraenkt": "eingeschränkt",
+        "nicht_nachweisbar": "nicht nachweisbar"
+      },
+      "monatsBehandlung": {
+        "gemessen": "gemessen",
+        "ausgeschlossen": "ausgeschlossen"
+      },
+      "exportZweck": {
+        "nachweis": "Nachweis",
+        "erfolgskontrolle": "Erfolgskontrolle",
+        "wissenschaftliche_auswertung": "Wissenschaftliche Auswertung"
+      },
+      "exportKategorie": {
+        "rohdaten": "Rohdaten",
+        "baseline": "Baseline",
+        "einflussgroessen": "Einflussgrößen",
+        "einspardaten": "Einspardaten",
+        "geraeteerkennung": "Geräteerkennung",
+        "meta": "Metadaten",
+        "einsparungsnachweis": "Einsparungsnachweis (Mappe)"
+      },
+      "stationDarstellung": {
+        "pseudonymisiert": "pseudonymisiert",
+        "klarname": "Klarname"
+      },
+      "einreichungArt": {
+        "verwendungsnachweis": "Verwendungsnachweis",
+        "zwischennachweis": "Zwischennachweis",
+        "anfrage_bafa": "Anfrage der Bewilligungsbehörde",
+        "stichprobe": "Stichprobe"
+      },
+      "uebermittlungsweg": {
+        "bscw_manuell": "BSCW (manueller Upload)",
+        "email_geschuetzt": "E-Mail (gesichert)",
+        "api": "Schnittstelle"
+      },
+      "korrekturGrundCode": {
+        "messwert_korrektur": "Messwert-Korrektur",
+        "klima_revision": "Klimadaten-Revision",
+        "baseline_korrektur": "Baseline-Korrektur",
+        "einflussgroesse_korrektur": "Einflussgrößen-Korrektur",
+        "verfahren_version_neu": "Neue Verfahrensversion",
+        "parameter_korrektur": "Parameter-Korrektur",
+        "foerderjahr_definition_geaendert": "Geänderte Förderjahr-Definition",
+        "sonstige": "Sonstiger Grund"
+      },
+      "regelCode": {
+        "FJ-01": "Förderjahr-Definition und Monatsmenge",
+        "FJ-02": "Genau eine Berechnung je Paar und Monat",
+        "FJ-03": "Nicht ausweisbarer Monat ohne dokumentierte Behandlung",
+        "FJ-04": "Monat eingeschränkt oder mit fehlenden Tagen",
+        "FJ-05": "Widersprüchliche Rechenhistorie",
+        "FJ-06": "Wechsel des Energieträgers",
+        "FJ-07a": "Endkunde gelöscht",
+        "FJ-07b": "Endkunde eingeschränkt — Ausweis mit Kennzeichnung",
+        "FJ-07c": "Endkunde gesperrt — Paar wird ausgeschlossen",
+        "FJ-08": "Quellenangabe der Klimadaten unvollständig",
+        "FJ-09": "Umfang enthält synthetische Daten",
+        "FJ-10": "Sperrstatus der Rohdaten nicht feststellbar",
+        "FJ-11a": "Anschlussnutzer gelöscht",
+        "FJ-11b": "Anschlussnutzer eingeschränkt — Ausweis mit Kennzeichnung",
+        "FJ-11c": "Anschlussnutzer gesperrt — Paar wird ausgeschlossen"
+      }
+    },
+    "foerderjahr": {
+      "listPage": {
+        "title": "Förderjahre",
+        "createAction": "Förderjahr anlegen",
+        "einfuehrung": "Ein Förderjahr legt den Zeitraum fest, über den Einsparungen zusammengefasst und nachgewiesen werden. Es ist der Ausgangspunkt jedes Nachweises."
+      },
+      "createPage": {
+        "title": "Förderjahr anlegen",
+        "submitAction": "Förderjahr anlegen"
+      },
+      "detailPage": {
+        "title": "Förderjahr",
+        "backAction": "Zurück zur Förderjahr-Übersicht"
+      },
+      "tabelle": {
+        "caption": "Angelegte Förderjahre",
+        "leer": "Noch kein Förderjahr angelegt. Legen Sie zuerst das Förderjahr an — Vollständigkeitsprüfung, Einspar-Lauf und Export bauen darauf auf.",
+        "code": "Kennung",
+        "nummer": "Projektjahr",
+        "zeitraum": "Zeitraum",
+        "definitionQuelle": "Zuschnitt",
+        "vorhabenRef": "Aktenzeichen",
+        "createdAt": "Angelegt am",
+        "detailsAnzeigen": "Details anzeigen"
+      },
+      "detail": {
+        "id": "Kennung (intern)",
+        "code": "Kennung",
+        "nummer": "Projektjahr",
+        "zeitraum": "Zeitraum",
+        "definitionQuelle": "Zuschnitt",
+        "vorhabenRef": "Aktenzeichen",
+        "bescheidRef": "Bescheid",
+        "createdAt": "Angelegt am",
+        "preflightSectionTitle": "Vollständigkeitsprüfung",
+        "preflightSectionHinweis": "Die Prüfung stellt fest, ob für alle Endkunden und Energieträger dieses Förderjahres vollständige, widerspruchsfreie Berechnungen vorliegen. Sie lässt sich beliebig oft wiederholen; jeder Lauf wird eigenständig festgehalten.",
+        "preflightAction": "Vollständigkeit prüfen",
+        "preflightErfolg": "Die Prüfung wurde durchgeführt.",
+        "einsparlaeufeSectionTitle": "Einspar-Läufe dieses Förderjahres"
+      },
+      "form": {
+        "code": "Kennung",
+        "codeHinweis": "Kurze, eindeutige Bezeichnung des Förderjahres, z. B. FJ-2027. Erlaubt sind Buchstaben, Ziffern, Bindestrich und Unterstrich.",
+        "vorhabenRef": "Aktenzeichen",
+        "vorhabenRefHinweis": "Das Aktenzeichen des Vorhabens, unter dem dieses Förderjahr gegenüber der Bewilligungsbehörde geführt wird.",
+        "nummer": "Projektjahr",
+        "nummerHinweis": "Das wievielte Jahr des Vorhabens ist es? Zählt ab 1.",
+        "vonMonat": "Erster Monat",
+        "vonMonatHinweis": "Erster Monat des Förderjahres, einschließlich. Bitte den Monatsersten wählen.",
+        "bisMonat": "Letzter Monat",
+        "bisMonatHinweis": "Letzter Monat des Förderjahres, einschließlich. Bitte ebenfalls den Monatsersten wählen.",
+        "definitionQuelle": "Zuschnitt",
+        "definitionQuellePlatzhalter": "Bitte wählen",
+        "definitionQuelleHinweis": "Folgt das Förderjahr dem Kalenderjahr oder dem Bewilligungszeitraum aus dem Bescheid?",
+        "bescheidRef": "Bescheid",
+        "bescheidRefHinweis": "Verweis auf den Zuwendungsbescheid, sofern er bereits vorliegt.",
+        "errors": {
+          "codeErforderlich": "Bitte eine Kennung angeben.",
+          "codeZuLang": "Die Kennung darf höchstens 32 Zeichen lang sein.",
+          "codeZeichen": "Erlaubt sind nur Buchstaben, Ziffern, Bindestrich und Unterstrich.",
+          "vorhabenRefErforderlich": "Bitte ein Aktenzeichen angeben.",
+          "vorhabenRefZuLang": "Das Aktenzeichen darf höchstens 128 Zeichen lang sein.",
+          "nummerUngueltig": "Bitte eine ganze Zahl angeben.",
+          "nummerBereich": "Das Projektjahr muss zwischen 1 und 20 liegen.",
+          "vonMonatErster": "Bitte den ersten Tag des Monats wählen.",
+          "bisMonatErster": "Bitte den ersten Tag des Monats wählen.",
+          "bisVorVon": "Der letzte Monat darf nicht vor dem ersten Monat liegen.",
+          "definitionQuelleErforderlich": "Bitte einen Zuschnitt wählen.",
+          "bescheidRefZuLang": "Der Bescheid-Verweis darf höchstens 128 Zeichen lang sein.",
+          "tagFormat": "Bitte ein Datum wählen oder das Feld leer lassen.",
+          "tageNurGemeinsam": "Erster Tag und erster Tag danach gehören zusammen — entweder beide ausfüllen oder beide leer lassen.",
+          "tagBisVorVon": "Der erste Tag danach muss nach dem ersten Tag liegen.",
+          "vonTagAusserhalb": "Der erste Tag muss in dem Monat liegen, der oben als Beginn angegeben ist.",
+          "bisTagAusserhalb": "Der letzte Tag des Förderjahres muss in dem Monat liegen, der oben als Ende angegeben ist. Denken Sie daran: hier steht der Tag DANACH."
+        },
+        "vonTag": "Erster Tag (optional)",
+        "vonTagHinweis": "Nur ausfüllen, wenn das Förderjahr nicht am Monatsersten beginnt — etwa weil es aus einem Bewilligungsbescheid stammt. Leer lassen heißt: der ganze Monat zählt.",
+        "bisTag": "Erster Tag danach (optional)",
+        "bisTagHinweis": "Der Tag NACH dem letzten Tag des Förderjahres. Läuft es bis zum 11.10., steht hier der 12.10. Nur gemeinsam mit dem ersten Tag."
+      }
+    },
+    "preflight": {
+      "detailPage": {
+        "title": "Vollständigkeitsprüfung",
+        "backAction": "Zurück zum Förderjahr"
+      },
+      "detail": {
+        "id": "Kennung (intern)",
+        "foerderjahrId": "Förderjahr",
+        "profil": "Prüfprofil",
+        "ergebnis": "Ergebnis",
+        "blockerAnzahl": "Blocker",
+        "warnungAnzahl": "Warnungen",
+        "hinweisAnzahl": "Hinweise",
+        "umfangPaareAnzahl": "Geprüfte Paare",
+        "monateErwartet": "Erwartete Monate",
+        "synthetic": "Synthetische Daten im Umfang",
+        "ausgefuehrtAt": "Geprüft am",
+        "ausgefuehrtVonSub": "Geprüft von",
+        "ampelGruen": "Prüfung bestanden",
+        "ampelRot": "Prüfung nicht bestanden",
+        "gruenHinweis": "Es liegen keine blockierenden Befunde vor. Auf dieser Prüfung lässt sich ein Förderjahr-Nachweis aufsetzen. Warnungen und Hinweise stehen einem Nachweis nicht entgegen, gehören aber in die Erläuterung.",
+        "rotHinweis": "Mindestens ein blockierender Befund steht offen. Solange er besteht, ist nur ein Zwischenstand möglich, kein Förderjahr-Nachweis. Beheben Sie die unten gelisteten Blocker und prüfen Sie erneut.",
+        "befundeSectionTitle": "Befunde",
+        "einsparlaufSectionTitle": "Nächster Schritt",
+        "einsparlaufHinweisGruen": "Aus dieser Prüfung kann jetzt ein Einspar-Lauf für das Förderjahr erzeugt werden.",
+        "einsparlaufHinweisRot": "Aus dieser Prüfung lässt sich nur ein Zwischenstand rechnen. Ein Förderjahr-Nachweis wird erst nach einer bestandenen Prüfung möglich.",
+        "einsparlaufAction": "Einspar-Lauf starten",
+        "paarBezogenHinweis": "Einzelne Befunde betreffen nur ein Endkunden-Energieträger-Paar und schließen dieses Paar vom Ausweis aus. Sie sind als Blocker gekennzeichnet, halten den Nachweis für das Förderjahr aber nicht auf.",
+        "systembedingtHinweis": "Einzelne Blocker entstehen aus dem Zustand des Systems, nicht aus den Daten dieses Förderjahres: Sie bestehen, solange der Betrieb auf synthetischen Testdaten läuft. Durch Datenpflege lassen sie sich nicht beheben. Ein Zwischenstand bleibt davon unberührt möglich."
+      },
+      "tabelle": {
+        "caption": "Befunde dieser Prüfung",
+        "leer": "Keine Befunde — für dieses Förderjahr liegen vollständige und widerspruchsfreie Berechnungen vor.",
+        "lfd": "Nr.",
+        "regelCode": "Prüfregel",
+        "schwere": "Schwere",
+        "endkundeId": "Endkunde",
+        "energietraeger": "Energieträger",
+        "monat": "Monat",
+        "kennzahlKlasse": "Merkmal",
+        "paarBezogenBadge": "nur dieses Paar",
+        "ohneBezug": "—",
+        "systembedingtBadge": "systembedingt"
+      }
+    },
+    "einsparlauf": {
+      "listPage": {
+        "title": "Einspar-Läufe",
+        "einfuehrung": "Ein Einspar-Lauf fasst die monatlichen Berechnungen eines Förderjahres je Endkunde und Energieträger zu einem Jahreswert zusammen. Läufe werden nie überschrieben — eine Neuberechnung löst den Vorgänger ab und bleibt daneben nachvollziehbar.",
+        "filterSectionTitle": "Filter",
+        "filterFoerderjahr": "Förderjahr",
+        "filterAlle": "Alle",
+        "filterArt": "Art",
+        "filterNurErstlaeufe": "Nur Erstläufe (Korrekturläufe ausblenden)"
+      },
+      "createPage": {
+        "title": "Einspar-Lauf starten",
+        "submitAction": "Einspar-Lauf starten",
+        "kontextSectionTitle": "Grundlage dieses Laufs",
+        "kontextFoerderjahr": "Förderjahr",
+        "kontextPreflight": "Vollständigkeitsprüfung",
+        "kontextErgebnis": "Ergebnis der Prüfung",
+        "backAction": "Zurück zur Prüfung",
+        "hinweisRot": "Die zugrunde liegende Prüfung ist nicht bestanden. Es lässt sich daher nur ein Zwischenstand rechnen — der Förderjahr-Nachweis steht erst nach einer bestandenen Prüfung zur Wahl.",
+        "hinweisDauer": "Der Lauf wird sofort gerechnet und kann bei großen Förderjahren einen Moment dauern."
+      },
+      "detailPage": {
+        "title": "Einspar-Lauf",
+        "backAction": "Zurück zur Übersicht der Einspar-Läufe"
+      },
+      "tabelle": {
+        "caption": "Einspar-Läufe",
+        "captionFuerFoerderjahr": "Gerechnete Läufe mit Stand und Qualitätsstufe",
+        "leer": "Noch kein Einspar-Lauf vorhanden. Ein Lauf entsteht aus einer Vollständigkeitsprüfung des Förderjahres.",
+        "leerFuerFoerderjahr": "Für dieses Förderjahr wurde noch kein Einspar-Lauf gerechnet. Starten Sie mit der Vollständigkeitsprüfung oben.",
+        "id": "Kennung",
+        "foerderjahrId": "Förderjahr",
+        "art": "Art",
+        "qualitaetsStufeMin": "Geringste Qualitätsstufe",
+        "status": "Stand",
+        "erstelltAt": "Gerechnet am",
+        "detailsAnzeigen": "Details anzeigen",
+        "erstlauf": "Erstlauf",
+        "korrektur": "Korrekturlauf"
+      },
+      "detail": {
+        "id": "Kennung (intern)",
+        "foerderjahrId": "Förderjahr",
+        "art": "Art",
+        "verfahren": "Verfahren",
+        "preflightId": "Vollständigkeitsprüfung",
+        "umfangPaareAnzahl": "Paare im Umfang",
+        "monateErwartet": "Erwartete Monate",
+        "monateGebunden": "Gebundene Monate",
+        "gebundeneLaeufeAnzahl": "Herangezogene Berechnungen",
+        "qualitaetsStufeMin": "Geringste Qualitätsstufe",
+        "ausloeser": "Auslöser",
+        "codeRevision": "Code-Stand",
+        "synthetic": "Synthetische Daten im Umfang",
+        "ersetztEinsparlaufId": "Löst ab",
+        "erstelltAt": "Gerechnet am",
+        "erstelltVonSub": "Gerechnet von",
+        "summeSectionTitle": "Summe des Förderjahres",
+        "summeEinsparung": "Ausgewiesene Einsparung",
+        "summeAusgewiesenePaare": "Ausgewiesene Paare",
+        "summeAusgeschlossenePaare": "Ausgeschlossene Paare",
+        "ergebnisSectionTitle": "Ergebnis je Endkunde und Energieträger",
+        "ergebnisSectionHinweis": "Die Aufstellung enthält bewusst auch Paare ohne Zahlenwert. Ein Nachweis, der Ausschlüsse verschweigt, wäre unvollständig.",
+        "bindungSectionTitle": "Monatsbindungen",
+        "bindungSectionHinweis": "Zeigt, welche monatliche Berechnung in diesen Lauf eingegangen ist. Die Werte sind zum Zeitpunkt des Laufs eingefroren.",
+        "bindungenEinblenden": "Monatsbindungen einblenden",
+        "bindungenAusblenden": "Monatsbindungen ausblenden",
+        "preflightAnzeigen": "Zugrunde liegende Prüfung ansehen",
+        "foerderjahrAnzeigen": "Förderjahr ansehen",
+        "vorgaengerAnzeigen": "Abgelösten Lauf ansehen"
+      },
+      "ergebnisTabelle": {
+        "caption": "Jahresergebnis je Endkunde und Energieträger",
+        "leer": "Dieser Lauf enthält keine Ergebniszeilen — im Umfang des Förderjahres lag kein Endkunden-Energieträger-Paar.",
+        "endkundeId": "Endkunde",
+        "energietraeger": "Energieträger",
+        "status": "Status",
+        "einsparungKwhEndenergie": "Einsparung",
+        "referenzKwhSumme": "Referenz",
+        "istKwhSumme": "Ist",
+        "monate": "Monate (ausgewiesen / fehlend)",
+        "qualitaetsStufeMin": "Qualitätsstufe",
+        "ausschlussGrundCode": "Grund",
+        "wissAuswertungAusgenommen": "Von wissenschaftlicher Auswertung ausgenommen",
+        "ausgenommenJa": "ausgenommen"
+      },
+      "bindungTabelle": {
+        "caption": "Monatsbindungen dieses Laufs",
+        "leer": "Für diesen Lauf wurde keine monatliche Berechnung gebunden.",
+        "endkundeId": "Endkunde",
+        "energietraeger": "Energieträger",
+        "monat": "Monat",
+        "referenzKwh": "Referenz",
+        "istKwh": "Ist",
+        "deltaKwh": "Differenz",
+        "deltaAusgewiesenKwh": "Davon ausgewiesen",
+        "qualitaetsStufe": "Qualitätsstufe",
+        "behandlung": "Behandlung",
+        "kandidatenAnzahl": "Kandidaten",
+        "berechnungslaufId": "Berechnung",
+        "mehrdeutigBadge": "mehrdeutig, aufgelöst"
+      },
+      "form": {
+        "art": "Art des Laufs",
+        "artPlatzhalter": "Bitte wählen",
+        "artHinweis": "Der Förderjahr-Nachweis ist das Ergebnis, das eingereicht werden kann. Ein Zwischenstand dient der eigenen Kontrolle und lässt sich nicht einreichen.",
+        "artHinweisGesperrt": "Solange die Prüfung nicht bestanden ist, steht nur der Zwischenstand zur Wahl.",
+        "ausloeser": "Auslöser",
+        "ausloeserPlatzhalter": "Bitte wählen",
+        "ausloeserHinweis": "Hält fest, warum dieser Lauf gerechnet wurde — als reguläre Rechnung oder als Korrektur eines bereits gerechneten Laufs.",
+        "ersetztEinsparlaufId": "Löst diesen Lauf ab",
+        "ersetztEinsparlaufIdPlatzhalter": "Kein Vorgänger — dies ist ein neuer Lauf",
+        "ersetztEinsparlaufIdHinweis": "Nur bei einer Neuberechnung setzen. Der abgelöste Lauf bleibt unverändert erhalten.",
+        "errors": {
+          "artErforderlich": "Bitte die Art des Laufs wählen.",
+          "ausloeserErforderlich": "Bitte einen Auslöser wählen."
+        }
+      }
+    },
+    "export": {
+      "detailPage": {
+        "title": "Nachweis-Export",
+        "backAction": "Zurück zum Einspar-Lauf"
+      },
+      "detail": {
+        "id": "Kennung (intern)",
+        "einsparlaufId": "Einspar-Lauf",
+        "schema": "Schema",
+        "format": "Format",
+        "zweck": "Zweck",
+        "de04Auszug": "Auszug für wissenschaftliche Auswertung",
+        "pseudonymProfil": "Pseudonym-Profil",
+        "stationDarstellung": "Klimastation",
+        "anfrageRef": "Anforderung",
+        "manifestHash": "Prüfsumme des Manifests",
+        "dateienAnzahl": "Dateien",
+        "zeilenAnzahlGesamt": "Zeilen insgesamt",
+        "erzeugtAt": "Erzeugt am",
+        "erzeugtVonSub": "Erzeugt von",
+        "dateienSectionTitle": "Dateien",
+        "dateienSectionHinweis": "Die Dateien werden bei jedem Abruf neu erzeugt und vor der Ausgabe gegen die hinterlegte Prüfsumme abgeglichen. Weicht der Inhalt ab, wird nichts ausgeliefert.",
+        "einsparlaufAnzeigen": "Einspar-Lauf ansehen"
+      },
+      "tabelle": {
+        "caption": "Dateien dieses Exports",
+        "leer": "Dieser Export enthält keine Dateien.",
+        "dateiname": "Datei",
+        "kategorie": "Kategorie",
+        "zeilenAnzahl": "Zeilen",
+        "dateiHash": "Prüfsumme",
+        "herunterladen": "Herunterladen",
+        "wirdGeladen": "Wird geladen …",
+        "downloadFehler": "Die Datei konnte nicht abgerufen werden.",
+        "downloadErfolg": "Die Datei wurde zum Speichern angeboten."
+      },
+      "erzeugen": {
+        "sectionTitle": "Nachweis-Export",
+        "hinweis": "Der Export stellt die Daten dieses Laufs in der von der Bewilligungsbehörde erwarteten Tabellenform zusammen. Standorte von Klimastationen erscheinen pseudonymisiert.",
+        "hinweisZwischenstand": "Aus einem Zwischenstand lässt sich ein Export erzeugen — einreichen lässt er sich nicht. Dafür ist ein Förderjahr-Nachweis nötig.",
+        "submitAction": "Export erzeugen"
+      },
+      "form": {
+        "zweck": "Zweck",
+        "zweckPlatzhalter": "Bitte wählen",
+        "zweckHinweis": "Wofür wird dieser Export erzeugt? Der Zweck wird im Metablatt des Exports mitgeführt.",
+        "errors": {
+          "zweckErforderlich": "Bitte einen Zweck wählen."
+        }
+      }
+    },
+    "einreichung": {
+      "detailPage": {
+        "title": "Einreichung",
+        "backAction": "Zurück zum Nachweis-Export"
+      },
+      "detail": {
+        "id": "Kennung (intern)",
+        "exportId": "Nachweis-Export",
+        "einsparlaufId": "Einspar-Lauf",
+        "art": "Art",
+        "anfrageRef": "Aktenzeichen der Anfrage",
+        "empfaenger": "Empfänger",
+        "uebermittlungsweg": "Übermittlungsweg",
+        "manifestHash": "Prüfsumme des Manifests",
+        "uebermitteltAt": "Übermittelt am",
+        "eingereichtVonSub": "Vermerkt von",
+        "belegRef": "Empfangsbeleg",
+        "ersetztEinreichungId": "Löst ab",
+        "korrekturGrundCode": "Korrekturgrund",
+        "createdAt": "Vermerkt am",
+        "ehrlichkeitsHinweis": "Dieser Eintrag hält fest, was die bedienende Person als übermittelt erklärt hat. Er belegt nicht, dass die Bewilligungsbehörde die Unterlagen erhalten hat.",
+        "differenzSectionTitle": "Abweichungen gegenüber der abgelösten Einreichung",
+        "differenzSectionHinweis": "Zeigt je Endkunde und Energieträger, wie sich der ausgewiesene Wert durch die Korrektur verändert hat.",
+        "exportAnzeigen": "Nachweis-Export ansehen",
+        "vorgaengerAnzeigen": "Abgelöste Einreichung ansehen"
+      },
+      "vermerken": {
+        "sectionTitle": "Einreichung vermerken",
+        "hinweis": "Halten Sie hier fest, dass Sie diesen Export an die Bewilligungsbehörde übermittelt haben. Die Übermittlung selbst geschieht außerhalb des Systems.",
+        "gesperrtHinweis": "Vermerken lässt sich nur ein Export, der auf einem Förderjahr-Nachweis beruht. Dieser Export beruht auf einem Zwischenstand.",
+        "gesperrtSyntheticHinweis": "Vermerken lässt sich nur ein Export ohne synthetische Daten im Umfang.",
+        "submitAction": "Einreichung vermerken",
+        "erfolg": "Die Einreichung wurde vermerkt."
+      },
+      "form": {
+        "art": "Art der Einreichung",
+        "artPlatzhalter": "Bitte wählen",
+        "artHinweis": "Aus welchem Anlass gehen die Unterlagen an die Bewilligungsbehörde?",
+        "uebermittlungsweg": "Übermittlungsweg",
+        "uebermittlungswegPlatzhalter": "Bitte wählen",
+        "uebermittlungswegHinweis": "Auf welchem Weg wurden die Unterlagen übermittelt?",
+        "uebermitteltAt": "Übermittelt am",
+        "uebermitteltAtHinweis": "Zeitpunkt der tatsächlichen Übermittlung, in deutscher Ortszeit. Vorbelegt ist der aktuelle Zeitpunkt.",
+        "empfaenger": "Empfänger",
+        "empfaengerHinweis": "Wer hat die Unterlagen erhalten? Voreingestellt ist die Bewilligungsbehörde.",
+        "anfrageRef": "Aktenzeichen der Anfrage",
+        "anfrageRefHinweis": "Wird nur auf Anfrage eingereicht: hier das Aktenzeichen der Anfrage eintragen.",
+        "belegRef": "Empfangsbeleg",
+        "belegRefHinweis": "Verweis auf eine Empfangsbestätigung, sofern bereits eine vorliegt.",
+        "ersetztEinreichungId": "Löst diese Einreichung ab",
+        "ersetztEinreichungIdHinweis": "Nur bei einer Korrektur setzen. Die abgelöste Einreichung bleibt unverändert erhalten.",
+        "korrekturGrundCode": "Korrekturgrund",
+        "korrekturGrundCodePlatzhalter": "Keine Korrektur",
+        "korrekturGrundCodeHinweis": "Bei einer Korrektur ist der Grund anzugeben — er geht in die Darlegung gegenüber der Bewilligungsbehörde ein.",
+        "errors": {
+          "artErforderlich": "Bitte die Art der Einreichung wählen.",
+          "uebermittlungswegErforderlich": "Bitte einen Übermittlungsweg wählen.",
+          "uebermitteltAtErforderlich": "Bitte den Zeitpunkt der Übermittlung angeben.",
+          "uebermitteltAtUngueltig": "Bitte einen vollständigen Zeitpunkt mit Datum und Uhrzeit angeben.",
+          "empfaengerErforderlich": "Bitte einen Empfänger angeben.",
+          "empfaengerZuLang": "Der Empfänger darf höchstens 128 Zeichen lang sein.",
+          "anfrageRefZuLang": "Das Aktenzeichen darf höchstens 128 Zeichen lang sein.",
+          "belegRefUngueltig": "Der Empfangsbeleg muss eine gültige Kennung sein.",
+          "ersetztEinreichungIdUngueltig": "Die abgelöste Einreichung muss eine gültige Kennung sein.",
+          "korrekturGrundFehlt": "Bitte einen Korrekturgrund wählen, wenn eine Einreichung abgelöst wird.",
+          "korrekturOhneVorgaenger": "Ein Korrekturgrund setzt voraus, dass eine abgelöste Einreichung angegeben ist."
+        }
+      },
+      "differenzTabelle": {
+        "caption": "Abweichungen gegenüber der abgelösten Einreichung",
+        "leer": "Keine Abweichungen — diese Einreichung löst keine frühere ab.",
+        "endkundeId": "Endkunde",
+        "energietraeger": "Energieträger",
+        "wertAltKwh": "Bisher",
+        "wertNeuKwh": "Neu",
+        "deltaKwh": "Differenz",
+        "ursacheCode": "Ursache"
+      }
+    },
+    "gemeinsam": {
+      "nichtVerfuegbar": "steht nicht zur Verfügung",
+      "keinVorgaenger": "kein Vorgänger",
+      "ja": "ja",
+      "nein": "nein",
+      "zugriffVerweigert": "Diese Ansicht ist dem Betriebs-Team vorbehalten.",
+      "uebersichtSectionTitle": "Endkunde auswählen"
+    }
+  },
+  "nutzerinfo": {
+    "lauf": {
+      "pageTitle": "Monatsinformation",
+      "pageEinfuehrung": "Endkunden erhalten mindestens monatlich eine Information über ihren Verbrauch und ihre Einsparung. Hier wird sie für einen abgeschlossenen Monat erzeugt.",
+      "woFindeIch": "Die erzeugten Informationen stehen beim jeweiligen Endkunden unter „Monatliche Information\" — dort lässt sich jeder Monat aufklappen und der Bericht ansehen, den der Kunde erhält.",
+      "titel": "Für einen Monat erzeugen",
+      "beschreibung": "Die Zahlen stammen aus derselben Berechnung, auf der auch der Nachweis gegenüber der Bewilligungsbehörde beruht. Sie werden nicht neu ermittelt.",
+      "monatLabel": "Monat",
+      "monatHinweis": "Nur abgeschlossene Monate. Ein laufender Monat ergäbe einen zu niedrigen Verbrauch.",
+      "monatFehler": "Bitte einen Monat im Format JJJJ-MM wählen.",
+      "probelaufAction": "Zählen (ohne zu erzeugen)",
+      "ausfuehrenAction": "Informationen erzeugen",
+      "probelaufHinweis": "Es wurde nichts erzeugt. Die Zahlen zeigen, was ein Lauf bewirken würde.",
+      "fazitVollstaendig": "Jeder Endkunde mit einer Berechnung für diesen Monat ist abgedeckt.",
+      "fazitBefund": "Für einen Teil der Endkunden fehlt die Berechnungsgrundlage. Sie können für diesen Monat nicht informiert werden.",
+      "modus": {
+        "probelauf": "Probelauf",
+        "ausfuehrung": "Ausgeführt"
+      },
+      "zahl": {
+        "erzeugt": "Informationen erzeugt",
+        "widerspruch": "Wegen Widerspruch ausgelassen",
+        "gesperrt": "Wegen Einschränkung ausgelassen",
+        "ohneBerechnung": "Ohne Berechnungsgrundlage"
+      },
+      "erlaeuterung": {
+        "erzeugt": "Für diese Endkunden liegt die Information des Monats vor.",
+        "widerspruch": "Diese Endkunden haben der monatlichen Information widersprochen. Das ist zulässig und vorgesehen.",
+        "gesperrt": "Für diese Endkunden ist die Verarbeitung eingeschränkt. Sie werden bewusst nicht informiert.",
+        "ohneBerechnung": "Für diese Endkunden gibt es keine eindeutige Berechnung des Monats — sie müssten informiert werden und können es nicht. Prüfen Sie die Berechnungsläufe."
+      }
+    },
+    "verlauf": {
+      "titel": "Monatliche Information",
+      "beschreibung": "Verbrauch und Einsparung je Monat, so wie der Endkunde sie erhält.",
+      "laedt": "Monate werden geladen …",
+      "ladeFehler": "Die monatlichen Informationen konnten nicht geladen werden.",
+      "leer": "Für diesen Endkunden wurde noch keine monatliche Information erzeugt. Erzeugen lässt sie sich unter „Monatliche Nutzerinformation\".",
+      "offenHinweisSuffix": "Monate sind erzeugt, aber noch nicht zugestellt. Erst die Zustellung erfüllt die Auflage.",
+      "einsparungSuffix": "eingespart",
+      "mehrverbrauchSuffix": "mehr verbraucht als erwartet",
+      "tageFehlendSuffix": "Tage ohne Messwerte",
+      "verbrauchLabel": "Tatsächlicher Verbrauch",
+      "erwartungLabel": "Erwartet nach Ausgangsbasis",
+      "gueteLabel": "Aussagekraft",
+      "energietraegerLabel": "Energieträger",
+      "zugestelltLabel": "Zugestellt",
+      "zugestelltBadge": "Zugestellt",
+      "offenBadge": "Noch nicht zugestellt",
+      "mehrAction": "Einzelheiten",
+      "wenigerAction": "Einzelheiten ausblenden",
+      "zustellungTitel": "Zustellung nachtragen",
+      "zustellungHinweis": "Wurde der Endkunde auf einem anderen Weg informiert, tragen Sie das hier nach. Ohne diesen Vermerk gilt der Monat als nicht zugestellt.",
+      "zugestelltAmLabel": "Zugestellt am",
+      "zustellwegLabel": "Auf welchem Weg",
+      "zustellungAction": "Als zugestellt vermerken",
+      "zustellungErfolg": "Die Zustellung wurde vermerkt."
+    },
+    "qualitaet": {
+      "belastbar": "Belastbar",
+      "eingeschraenkt": "Eingeschränkt",
+      "nicht_ausweisbar": "Nicht aussagekräftig"
+    },
+    "zustellweg": {
+      "portal_bereitgestellt": "Im Portal bereitgestellt",
+      "email": "Per E-Mail",
+      "brief": "Per Brief",
+      "persoenlich": "Persönlich übergeben"
+    },
+    "bericht": {
+      "titel": "Ihr Verbrauch und Ihre Einsparung",
+      "ladeFehler": "Der Bericht konnte nicht geladen werden.",
+      "einsparungSuffix": "eingespart",
+      "mehrverbrauchSuffix": "mehr verbraucht als erwartet",
+      "verbrauchLabel": "Tatsächlich verbraucht",
+      "erwartungLabel": "Ohne die Maßnahme zu erwarten gewesen",
+      "vormonatLabel": "Vormonat",
+      "vormonatPrefix": "damals",
+      "zugestelltLabel": "Zugestellt am",
+      "guteHinweis": "Für diesen Monat liegen nicht alle Messwerte vor. Die Angaben beruhen auf einer Abdeckung von",
+      "gruppenTitel": "Wofür der Strom verbraucht wurde",
+      "gruppenBeschreibung": "Verbrauch der erkannten Geräte- und Anlagengruppen in diesem Monat.",
+      "gruppenLeer": "Für diesen Monat war noch keine Gerätegruppe zugeordnet. Sobald eine besteht, erscheint hier die Aufteilung.",
+      "ohneTageswerte": "Für diesen Monat liegen keine Tageswerte vor. Eine Aufteilung ist damit nicht bestimmbar — sie ist nicht null, sondern unbekannt.",
+      "nichtZugeordnetLabel": "Übriger erfasster Verbrauch",
+      "gruppenHinweis": "Die Aufteilung beruht auf den Zuordnungen, die in diesem Monat galten.",
+      "dokumentAction": "Kundendokument speichern",
+      "dokumentLaeuft": "Wird erstellt …",
+      "dokumentErfolg": "Das Kundendokument wurde gespeichert.",
+      "dokumentFehler": "Das Kundendokument konnte nicht erstellt werden.",
+      "dokumentHinweis": "Die Datei im Browser öffnen und über „Drucken“ ausgeben oder als PDF sichern."
+    },
+    "versand": {
+      "titel": "Versand und Zustellnachweis",
+      "beschreibung": "Erzeugen ist nicht informieren: Die Auflage ist erst erfüllt, wenn der Endkunde die Information erhalten hat. Hier entsteht die druckfertige Versandmappe des Monats — eine Seite je Kunde — und hier wird der erfolgte Versand vermerkt.",
+      "monatLabel": "Monat",
+      "mappeAction": "Versandmappe holen",
+      "mappeLaeuft": "Wird erstellt …",
+      "mappeErfolg": "Die Versandmappe wurde gespeichert.",
+      "mappeFehler": "Die Versandmappe konnte nicht erstellt werden.",
+      "druckHinweis": "Die Mappe im Browser öffnen und über „Drucken“ ausgeben oder als PDF sichern. Jede Information beginnt auf einer eigenen Seite.",
+      "zustellenAction": "Zustellung für den Monat vermerken",
+      "zustellenErfolgSuffix": "Informationen als zugestellt vermerkt für",
+      "bereitsZugestelltSuffix": "waren bereits zugestellt und bleiben unverändert.",
+      "dialogTitel": "Zustellung für den ganzen Monat vermerken?",
+      "dialogText": "Vermerkt wird der Versand per Brief zum jetzigen Zeitpunkt, für alle noch offenen Informationen dieses Monats. Bereits zugestellte bleiben unverändert — ihr erster Zeitpunkt ist der Nachweis. Der Vermerk lässt sich nicht zurücknehmen.",
+      "dialogBestaetigen": "Jetzt vermerken",
+      "dialogAbbrechen": "Abbrechen"
+    }
+  },
+  "geraeteerkennung": {
+    "titel": "Geräte- und Anlagengruppen",
+    "beschreibung": "Ein Anteil des Jahresverbrauchs muss Geräte- oder Anlagengruppen zugeordnet werden können — 20 % im ersten Projektjahr, ansteigend auf 40 % im fünften.",
+    "laedt": "Gruppen und Zuordnungen werden geladen …",
+    "ladeFehler": "Gruppen und Zuordnungen konnten nicht geladen werden.",
+    "gruppenLeer": "Für diesen Endkunden ist noch keine Gerätegruppe angelegt. Legen Sie zuerst eine an — zugeordnet wird danach am jeweiligen Messkanal.",
+    "zuordnungenLeer": "Noch kein Messkanal zugeordnet. Die Zuordnung erfolgt auf der Detailseite des Messkanals, der die Gruppe misst.",
+    "erfolg": "Die Änderung wurde gespeichert.",
+    "gruppenTitel": "Gruppen",
+    "gruppeAnlegenLabel": "Neue Gruppe",
+    "gruppeAnlegenHinweis": "Die Bezeichnung sieht der Endkunde in seiner monatlichen Information — „Beleuchtung\" ist verständlicher als „Abgang 3\".",
+    "gruppeAnlegenAction": "Gruppe anlegen",
+    "zuordnungenTitel": "Zuordnungen",
+    "zuordnungenHinweis": "Beendete Zuordnungen bleiben stehen. Sie belegen die Zeit, in der sie galten — und damit die Quote der Vergangenheit.",
+    "beendenGrundLabel": "Grund für das Beenden",
+    "beendenGrundHinweis": "Pflicht: Das Beenden senkt die Nachweisquote und muss erklärbar bleiben.",
+    "beendenAction": "Zuordnung beenden",
+    "methode": {
+      "direktmessung": "Direktmessung",
+      "algorithmus": "Algorithmus-Erkennung",
+      "vorschaltgeraet": "Vorschaltgerät",
+      "sonstige": "Sonstige Erhebung"
+    },
+    "zuordnung": {
+      "genauigkeitMessgeraet": "Genauigkeit des Messgeräts",
+      "untermessung": "Untermessung (im Gesamtverbrauch enthalten)",
+      "eigenerZaehler": "Eigener Zähler neben der Hauptmessung",
+      "seit": "seit",
+      "methodeLabel": "Methode",
+      "genauigkeitLabel": "Genauigkeit",
+      "anteilLabel": "Anteil am Kanal",
+      "topologieLabel": "Messstellen-Lage",
+      "zeitraumLabel": "Gültig",
+      "kanalLabel": "Messkanal",
+      "beendetLabel": "Beendet, weil",
+      "wirksamBadge": "Wirksam",
+      "beendetBadge": "Beendet"
+    },
+    "quote": {
+      "titel": "Zuordnungsquote",
+      "projektjahr": "Projektjahr",
+      "foerderjahrLabel": "Förderjahr",
+      "foerderjahrPlaceholder": "Förderjahr wählen",
+      "energietraegerLabel": "Energieträger",
+      "waehlenHinweis": "Wählen Sie ein Förderjahr — die geforderte Quote hängt am Projektjahr.",
+      "laedt": "Quote wird berechnet …",
+      "istLabel": "Zugeordnet",
+      "sollLabel": "Gefordert",
+      "zugeordnetLabel": "Zugeordnete Menge",
+      "gesamtLabel": "Gesamtverbrauch",
+      "erreicht": "Die geforderte Quote ist erreicht.",
+      "nichtErreicht": "Die geforderte Quote ist nicht erreicht.",
+      "unbekannt": "Die Quote ist für diesen Zeitraum nicht bestimmbar.",
+      "ohneTageswerte": "Für diesen Zeitraum liegen keine Tageswerte vor. Die Quote ist damit nicht 0 %, sondern unbekannt — meist fehlt die Verdichtung der Messwerte.",
+      "entbehrlichSuffix": "Systeme sind als „Geräteerkennung nicht sinnvoll\" vermerkt, von insgesamt",
+      "gruppenTitel": "Aufteilung nach Gruppen"
+    },
+    "entbehrlich": {
+      "titel": "Geräteerkennung für dieses System",
+      "beschreibung": "Wo eine Geräteerkennung nicht sinnvoll ist — etwa bei einem System mit nur einem Gerät — gelten die Anforderungen pauschal als erfüllt.",
+      "checkboxLabel": "Geräteerkennung ist für dieses System nicht sinnvoll",
+      "grundLabel": "Begründung",
+      "grundHinweis": "Pflicht. „Pauschal erfüllt\" ohne Begründung ist gegenüber der Bewilligungsbehörde keine Feststellung, sondern eine Behauptung.",
+      "action": "Vermerk speichern",
+      "erfolg": "Der Vermerk wurde gespeichert.",
+      "warnung": "Dieser Vermerk erklärt eine Förderauflage für dieses System als erfüllt. Er wird protokolliert.",
+      "ladeFehler": "Der bisherige Vermerk konnte nicht geladen werden."
+    },
+    "zuordnenForm": {
+      "titel": "Einer Gerätegruppe zuordnen",
+      "beschreibung": "Ordnen Sie diesen Messkanal einer Geräte- oder Anlagengruppe des Endkunden zu. Der zugeordnete Verbrauch zählt ab dem Gültigkeitsbeginn in die Nachweisquote.",
+      "ladeFehler": "Die Gerätegruppen des Endkunden konnten nicht geladen werden.",
+      "ohneGruppen": "Für diesen Endkunden ist noch keine Gerätegruppe angelegt. Ohne Gruppe gibt es nichts, dem der Kanal zugeordnet werden könnte.",
+      "zumEndkunden": "Zum Endkunden",
+      "gruppeLabel": "Gerätegruppe",
+      "gruppeHinweis": "Die Gruppe, deren Verbrauch dieser Kanal misst.",
+      "methodeLabel": "Erhebungsmethode",
+      "methodeHinweis": "Wie der Anteil ermittelt wird. Eine gemessene Zuordnung ist etwas anderes als eine geschätzte — die Bewilligungsbehörde will den Unterschied wissen.",
+      "genauigkeitLabel": "Genauigkeit in Prozent",
+      "genauigkeitHinweis": "Pflicht bei jeder Methode außer der Direktmessung. Bei Direktmessung bleibt das Feld leer — dort ist die Genauigkeit die des Messgeräts.",
+      "anteilLabel": "Anteil am Kanalverbrauch in Prozent",
+      "anteilHinweis": "Wie viel des an diesem Kanal gemessenen Verbrauchs der Gruppe zuzurechnen ist. Bei Direktmessung 100.",
+      "gueltigVonLabel": "Gültig ab",
+      "gueltigVonHinweis": "Ab diesem Tag zählt der Verbrauch in die Quote. Ein Kanal darf zu einem Zeitpunkt nur einer Gruppe zugeordnet sein.",
+      "action": "Zuordnung anlegen",
+      "erfolg": "Die Zuordnung wurde angelegt.",
+      "errors": {
+        "gruppeErforderlich": "Bitte wählen Sie eine Gerätegruppe.",
+        "methodeErforderlich": "Bitte wählen Sie eine Erhebungsmethode.",
+        "genauigkeitErforderlich": "Ohne Direktmessung ist die Genauigkeit anzugeben (größer 0 bis 100).",
+        "anteilUngueltig": "Bitte einen Anteil größer 0 und höchstens 100 angeben.",
+        "gueltigVonErforderlich": "Bitte geben Sie an, ab wann die Zuordnung gilt."
+      },
+      "untermessungHerkunft": "Ob dieser Kanal eine Untermessung ist, steht am Messkanal selbst — im Abschnitt „Messkanal ändern\" auf dieser Seite. Die Einsparberechnung liest die Angabe von dort."
+    }
+  },
+  "portal": {
+    "titel": "Ihr Energieportal",
+    "skipLink": "Zum Hauptinhalt springen",
+    "abmelden": "Abmelden",
+    "angemeldetAls": "Angemeldet als",
+    "laedt": "Wird geladen …",
+    "zurueck": "Zurück zur Übersicht",
+    "anmeldung": {
+      "titel": "Anmeldung",
+      "beschreibung": "Hier sehen Sie Ihren Verbrauch und Ihre Einsparungen — jeden Monat, sobald sie feststehen.",
+      "tabAnmelden": "Ich habe schon ein Passwort",
+      "tabEinloesen": "Ich habe einen Zugangsbrief",
+      "kennungLabel": "Kennung",
+      "kennungHinweis": "Sie steht in Ihrem Zugangsbrief, zum Beispiel EK-A3K7QP.",
+      "passwortLabel": "Passwort",
+      "codeLabel": "Zugangscode",
+      "codeHinweis": "Aus dem Brief, zum Beispiel ABCD-EFGH-JKMN. Groß- und Kleinschreibung und die Bindestriche sind egal.",
+      "neuesPasswortLabel": "Neues Passwort",
+      "neuesPasswortHinweis": "Mindestens zwölf Zeichen. Sie melden sich danach immer mit Ihrer Kennung und diesem Passwort an.",
+      "passwortWiederholenLabel": "Passwort wiederholen",
+      "absendenAnmelden": "Anmelden",
+      "absendenEinloesen": "Zugang einrichten",
+      "laeuft": "Einen Moment …",
+      "fehler": "Die Anmeldung war nicht erfolgreich. Bitte prüfen Sie Ihre Eingaben.",
+      "passwortUngleich": "Die beiden Passwörter stimmen nicht überein.",
+      "passwortZuKurz": "Das Passwort muss mindestens zwölf Zeichen haben.",
+      "codeFehlt": "Bitte geben Sie den Zugangscode aus Ihrem Brief ein.",
+      "kennungFehlt": "Bitte geben Sie Ihre Kennung ein.",
+      "keinBrief": "Sie haben keinen Zugangsbrief? Wenden Sie sich an Ihren Ansprechpartner — ein Zugangscode kann nicht erneut mitgeteilt, sondern nur neu ausgestellt werden."
+    },
+    "uebersicht": {
+      "titel": "Ihre monatlichen Informationen",
+      "beschreibung": "Die letzten zwei Jahre, neueste zuerst.",
+      "leer": "Für Sie liegt noch keine monatliche Information vor. Sobald die erste erstellt ist, erscheint sie hier.",
+      "ladeFehler": "Ihre Informationen konnten nicht geladen werden.",
+      "spalteMonat": "Monat",
+      "spalteEnergietraeger": "Energieträger",
+      "spalteErgebnis": "Ergebnis",
+      "spalteVerbrauch": "Verbrauch",
+      "spalteAktion": "Details",
+      "ansehen": "Ansehen",
+      "einsparung": "eingespart",
+      "mehrverbrauch": "mehr verbraucht als erwartet"
+    },
+    "monat": {
+      "titelPrefix": "Ihre Information für",
+      "drucken": "Diese Seite drucken",
+      "druckenLaeuft": "Wird vorbereitet …",
+      "druckenFehler": "Das Dokument konnte nicht erstellt werden.",
+      "druckenHinweis": "Öffnet das Blatt, das Sie sonst per Post bekämen, im Druckdialog.",
+      "rahmenTitel": "Druckansicht Ihrer Energieinformation"
+    },
+    "widerspruch": {
+      "titel": "Monatliche Information",
+      "standAktiv": "Sie bekommen jeden Monat eine Information über Ihren Verbrauch und Ihre Einsparung.",
+      "standWidersprochen": "Sie haben der monatlichen Information widersprochen. Ihre Verbrauchsdaten werden weiterhin erfasst — Sie werden nur nicht mehr aktiv informiert.",
+      "seitLabel": "Widersprochen am",
+      "widersprechen": "Keine monatliche Information mehr erhalten",
+      "zuruecknehmen": "Monatliche Information wieder erhalten",
+      "laeuft": "Wird gespeichert …",
+      "ladeFehler": "Der Stand konnte nicht geladen werden.",
+      "fehler": "Ihre Erklärung konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.",
+      "erfolgWiderspruch": "Ihr Widerspruch ist gespeichert. Sie erhalten ab sofort keine monatliche Information mehr.",
+      "erfolgRuecknahme": "Sie erhalten wieder jeden Monat eine Information.",
+      "hinweis": "Sie können diese Entscheidung jederzeit ändern. Wir halten Zeitpunkt und Herkunft Ihrer Erklärung als Nachweis fest.",
+      "bestaetigenTitel": "Keine monatliche Information mehr?",
+      "bestaetigenText": "Sie erhalten dann keine monatliche Übersicht über Ihren Verbrauch und Ihre Einsparung mehr. Ihre bisherigen Informationen bleiben hier abrufbar, und Sie können den Widerspruch jederzeit zurücknehmen.",
+      "bestaetigenJa": "Ja, nicht mehr informieren",
+      "bestaetigenAbbrechen": "Abbrechen"
+    },
+    "nichtGefunden": {
+      "titel": "Diese Seite gibt es nicht",
+      "text": "Der Link führt ins Leere. Über die Übersicht finden Sie Ihre Informationen."
+    },
+    "zugang": {
+      "titel": "Portal-Zugang",
+      "beschreibung": "Über das Nutzerportal sieht der Endkunde seine monatlichen Informationen selbst — und kann ihnen dort widersprechen.",
+      "laedt": "Wird geladen …",
+      "ladeFehler": "Der Stand des Portal-Zugangs konnte nicht geladen werden.",
+      "keinZugang": "Für diesen Endkunden besteht noch kein Portal-Zugang.",
+      "kennungLabel": "Kennung",
+      "statusLabel": "Status",
+      "codeOffenBisLabel": "Zugangscode gültig bis",
+      "passwortGesetztLabel": "Passwort gesetzt",
+      "gesperrtBisLabel": "Vorübergehend gesperrt bis",
+      "ja": "Ja",
+      "nein": "Nein",
+      "statusAusgegeben": "Code ausgegeben, noch nicht eingelöst",
+      "statusAktiv": "Aktiv",
+      "statusGesperrt": "Gesperrt",
+      "ausgeben": "Zugangscode ausgeben",
+      "ausgebenErneut": "Neuen Zugangscode ausgeben",
+      "ausgebenLaeuft": "Wird ausgestellt …",
+      "ausgebenFehler": "Der Zugangscode konnte nicht ausgestellt werden.",
+      "ausgebenHinweis": "Der Code erscheint genau einmal — er wird nirgends gespeichert und kann nicht erneut angezeigt werden. Brief drucken, dann schließen.",
+      "bestaetigenTitel": "Neuen Zugangscode ausgeben?",
+      "bestaetigenText": "Ein bereits verschickter Zugangscode wird dadurch ungültig. Das Passwort des Kunden bleibt bestehen.",
+      "bestaetigenJa": "Neuen Code ausgeben",
+      "bestaetigenAbbrechen": "Abbrechen",
+      "briefTitel": "Zugangsbrief",
+      "briefCodeLabel": "Zugangscode",
+      "briefKennungLabel": "Kennung",
+      "briefGueltigBisLabel": "Gültig bis",
+      "briefDrucken": "Zugangsbrief drucken",
+      "briefSchliessen": "Schließen",
+      "briefRahmenTitel": "Druckansicht des Zugangsbriefs",
+      "briefWarnungStandardUrl": "Achtung: EDMS_PORTAL_URL ist nicht gesetzt. Im Brief steht die Entwicklungsadresse — so gedruckt findet der Kunde das Portal nicht.",
+      "sperren": "Zugang sperren",
+      "sperrenLaeuft": "Wird gesperrt …",
+      "sperrenFehler": "Der Zugang konnte nicht gesperrt werden.",
+      "sperrenTitel": "Portal-Zugang sperren?",
+      "sperrenText": "Der Zugang wird gesperrt und alle offenen Sitzungen werden beendet. Aus einer Sperre führt kein neuer Code heraus — sie lässt sich nicht im Portal aufheben.",
+      "sperrenJa": "Ja, sperren"
+    }
+  }
+}

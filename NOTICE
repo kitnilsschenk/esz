@@ -1,0 +1,69 @@
+EDMS — Energiedatenmanagementsystem für das BAFA-Pilotprogramm Einsparzähler
+Copyright 2026 KIT Consulting GmbH
+
+Dieses Produkt enthält Software, die von der KIT Consulting GmbH entwickelt
+wurde (https://www.kit-consulting.de).
+
+
+WOFÜR DIESE DATEI DA IST
+------------------------
+
+Abschnitt 4(d) der Apache-Lizenz 2.0 verlangt: Wer dieses Werk oder ein davon
+abgeleitetes Werk weitergibt, muss den Inhalt dieser Datei mitgeben — in einer
+NOTICE-Datei, in der Dokumentation oder in der Anzeige, die das abgeleitete
+Werk erzeugt.
+
+Das ist der Grund, warum dieses Projekt unter Apache-2.0 steht und nicht unter
+MIT: Die Förderauflage verlangt eine Lizenz, die kommerzielle Weiterverwendung
+und Einbettung ohne Einschränkung erlaubt — das tun beide. Aber nur Apache-2.0
+sorgt dafür, dass der Urheber dabei genannt bleibt.
+
+Der Text unterhalb dieser Erläuterung ist der weiterzugebende Teil. Wer eigene
+Beiträge hinzufügt, darf eigene Vermerke anfügen; die bestehenden dürfen nicht
+entfernt werden.
+
+
+MARKEN
+------
+
+Die Lizenz gewährt keine Rechte an den Marken der KIT Consulting GmbH
+(Abschnitt 6 der Apache-Lizenz 2.0). Dazu gehören insbesondere der Name
+„KIT Consulting" und das Logo, das diesem Projekt unter
+`src/frontend/src/shared/branding/` beiliegt.
+
+Wer dieses Werk weitergibt oder darauf aufbaut, darf und soll die KIT
+Consulting GmbH als Urheberin NENNEN — er darf den Namen und das Logo aber
+nicht so verwenden, dass der Eindruck einer Herausgeberschaft, einer
+Befürwortung oder einer geschäftlichen Verbindung entsteht.
+
+Die Logodateien sind nicht Teil des Quellcodes im Sinne der Lizenz. Wer eine
+abgeleitete Fassung veröffentlicht, ersetzt sie durch eigene.
+
+
+ENTHALTENE FREMDDATEN
+---------------------
+
+Klimadaten: Quelle: Deutscher Wetterdienst
+
+Datenbasis: Deutscher Wetterdienst, Einzelwerte zu Gradtagzahlen nach
+VDI 3807 aggregiert.
+
+Die Tagesmitteltemperaturen stammen aus dem Climate Data Center des Deutschen
+Wetterdienstes (opendata.dwd.de), Lizenz CC BY 4.0 bzw. GeoNutzV. Der
+Quellenvermerk ist nach § 7 DWD-Gesetz vorgegeben und wörtlich übernommen.
+Einzelheiten und die Fundstellenkette: `docs/datenquellen.md`, Eintrag DQ-001.
+
+Die Attribution erscheint zusätzlich in jedem Nachweis-Export und in jedem
+kundengerichteten Dokument, das auf bereinigten Werten beruht — sie hängt dort
+an den DATEN, nicht an einer Konfiguration: Ein Export ohne DWD-Werte weist
+ausdrücklich aus, dass die Attribution nicht anwendbar ist, statt eine Quelle
+zu behaupten, die nicht verwendet wurde.
+
+
+ABHÄNGIGKEITEN
+--------------
+
+Dieses Produkt nutzt Open-Source-Bibliotheken Dritter unter ihren jeweiligen
+Lizenzen. Die vollständige Aufstellung samt Lizenztexten entsteht je Release
+als SBOM (CycloneDX); die zulässigen Lizenzen und die Prüfpflichten stehen in
+`.claude/rules/dependencies.md`.

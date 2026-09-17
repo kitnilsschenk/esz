@@ -1,0 +1,386 @@
+# EDMS Verbrauchs-/Messwert-API — OpenAPI-Contract
+# (backend-lead-Arbeitsauftrag "letztes fehlendes Stück", Status: proposed)
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Security-Scheme oauth2 als GLOBALER Default (JwtAuthGuard, ADR-0002 D1);
+#     KEIN öffentlicher Endpoint — jede Route läuft zusätzlich durch
+#     PolicyInterceptor (RBAC @Roles + ABAC-PDP) und AuditActionInterceptor.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - Beide Routen sind reine Lese-Operationen (GET) — KEINE Pagination
+#     nötig (Zeitreihen sind über `von`/`bis` selbst begrenzt), KEIN
+#     `Idempotency-Key` (wiederholbare, seiteneffektfreie Leseoperation).
+#
+# ===========================================================================
+# Fachlicher Kern (bitte vor Review lesen)
+# ===========================================================================
+#   - `measurement.messwert` speichert überwiegend `kumulativ_zaehlerstand`
+#     (Zählerstände) — Verbrauch = Differenz aufeinanderfolgender Stände,
+#     NIEMALS der Rohwert selbst. `intervall_verbrauch`-Kanäle werden direkt
+#     summiert (KEINE Differenzbildung). Ein Zählerwechsel/-überlauf (neg.
+#     Differenz) wird NIE als negativer Verbrauch gezählt (übersprungen, s.
+#     `MeasurementMesswertRepository.findVerbrauchAggregiert()`).
+#   - Lücken (keine Rohwerte, oder ausschließlich ungültige Differenzen in
+#     einem Zeit-Bucket) erscheinen NIE als `wert:0` in der Zeitreihe — sie
+#     fehlen dort schlicht und werden separat gezählt
+#     (`metadaten.erkannteLuecken`).
+#   - Gemischte Einheiten/Messgrößen werden NIE addiert: jeder Punkt der
+#     aggregierten Zeitreihe trägt seine eigene `messgroesse`+`einheit`.
+#
+# ===========================================================================
+# ABAC-Zuordnung (zwei strikt getrennte Aktionen, ANALOG zu ADR-0010 D5)
+# ===========================================================================
+#   - `read:verbrauch_aggregat` (NEU) — Route A, normales `betrieb`-Recht,
+#     KEIN break-glass (DS-07 schützt die Detailtiefe des Lastgangs, nicht
+#     die Existenz einer aggregierten Summe). `compliance-auditor` erhält
+#     dieselbe Sicht (analog `read:monitoring`).
+#   - `read:verbrauch_detail` (BESTEHEND, ADR-0008 §16/D4) — Route B,
+#     WIEDERVERWENDET, NICHT aufgeweicht: break-glass-Deny-by-default,
+#     Zweck-Header `X-Edms-Zugriffszweck`(+`-Zaehler-Id`/`-Von`/`-Bis`)
+#     PFLICHT, Katalog-Event `stammdaten.verbrauch_detail.einsicht`
+#     (bereits seit V0006 geseedet) auditiert sowohl `permit` als auch
+#     `deny`.
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Verbrauchs-/Messwert-API
+  version: 0.1.0
+  summary: >
+    Letztes fehlendes Ausliefer-Stück: liest Messwerte aus
+    `measurement.messwert` (TimescaleDB-Hypertable) aus — aggregierter,
+    PII-freier Verbrauch je Standortknoten (Route A) sowie die
+    break-glass-gehärtete Roh-Zeitreihe je Messkanal (Route B).
+  description: >
+    Reine Lese-API, ergänzend zu `stammdaten.openapi.yaml` (dort war
+    `read:verbrauch_detail` bislang PDP-ready, aber ohne Endpoint — ADR-0008
+    §16 "erster realer Konsument = Verbrauchs-/Lastgang-Endpoint"). Eigenes
+    Contract-Dokument (eigener fachlicher Kontext `measurement`, analog zur
+    Trennung `stammdaten`/`ingest-worker` im Code).
+  contact:
+    name: EDMS Studio
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Dev-Umgebung (Docker Compose, NestJS-Backend/BFF)
+
+tags:
+  - name: verbrauch
+    description: >
+      Aggregierter Verbrauch je Standortknoten (Differenzbildung bei
+      kumulativen Zählerständen, Summierung bei Intervall-Verbrauch,
+      Zeitauflösung über `time_bucket`).
+  - name: messkanal-zeitreihe
+    description: >
+      Roh-Zeitreihe je Messkanal inkl. `qualitaet`/`herkunft` — break-glass
+      (`read:verbrauch_detail`, ADR-0008 §16/D4).
+
+security:
+  - oauth2: []
+
+paths:
+  /messwerte/standorte/{standortId}/verbrauch:
+    parameters:
+      - $ref: '#/components/parameters/StandortIdPath'
+    get:
+      operationId: verbrauchAggregatLesen
+      tags: [verbrauch]
+      summary: Aggregierter Verbrauch je Standortknoten (inkl. Unterknoten)
+      description: >
+        ABAC-Aktion `read:verbrauch_aggregat` (NEU). Rollen
+        `betrieb`/`compliance-auditor`, KEIN break-glass. Nutzt die Kern-Query
+        "alle Zähler unter Knoten X zum Stichtag T" (ADR-0010 D6,
+        `pfad @> ARRAY[...]` + Zeitscheibe) und aggregiert deren aktive
+        Messkanäle über das halboffene Intervall `[von, bis)` (UTC) in der
+        gewünschten Zeitauflösung (`time_bucket`, Apache-2-konform).
+
+        `stichtag` (Default `bis`) legt fest, welcher Zähler-Bestand für die
+        GESAMTE Periode gilt (v1-Vereinfachung — ein Zähler, der WÄHREND
+        `[von, bis)` umgezogen wurde, wird einheitlich nach seinem Zustand
+        zum `stichtag` gezählt, nicht bucket-genau neu aufgelöst).
+
+        Response ist PII-FREI: keine Standort-Bezeichnung/Adresse, nur die
+        `standortId` aus dem Pfad ist bereits bekannt.
+      parameters:
+        - $ref: '#/components/parameters/VonParam'
+        - $ref: '#/components/parameters/BisParam'
+        - $ref: '#/components/parameters/AufloesungParam'
+        - $ref: '#/components/parameters/InklusiveUnterknotenParam'
+        - $ref: '#/components/parameters/StichtagParam'
+      responses:
+        '200':
+          description: Aggregierte Verbrauchs-Zeitreihe + Metadaten.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerbrauchAggregatAntwort'
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /messwerte/messkanaele/{messkanalId}:
+    parameters:
+      - $ref: '#/components/parameters/MesskanalIdPath'
+    get:
+      operationId: messkanalZeitreiheLesen
+      tags: [messkanal-zeitreihe]
+      summary: Roh-Zeitreihe eines Messkanals (Detailansicht, break-glass)
+      description: >
+        ABAC-Aktion `read:verbrauch_detail` (BESTEHEND, ADR-0008 §16/D4 —
+        WIEDERVERWENDET, nicht aufgeweicht). Rollen
+        `betrieb`/`compliance-auditor`; **deny by default** — permit NUR mit
+        vollständig aufgelöstem, whitelisted, fenster-konformem
+        break-glass-Zweck (Header `X-Edms-Zugriffszweck` = Zweck-Code, z. B.
+        `stoerungsdiagnose`; `X-Edms-Zugriffszweck-Zaehler-Id`;
+        `X-Edms-Zugriffszweck-Von`/`-Bis` ≤ `MAX_FENSTER_TAGE`). Sowohl
+        `permit` als auch `deny` werden auditiert
+        (`stammdaten.verbrauch_detail.einsicht`).
+
+        Liefert die ROHEN Messwerte inkl. `qualitaet`/`herkunft` — KEINE
+        Differenzbildung/Aggregation (das leistet ausschließlich Route A).
+      parameters:
+        - $ref: '#/components/parameters/VonParam'
+        - $ref: '#/components/parameters/BisParam'
+        - $ref: '#/components/parameters/ZugriffszweckHeader'
+        - $ref: '#/components/parameters/ZugriffszweckZaehlerIdHeader'
+        - $ref: '#/components/parameters/ZugriffszweckVonHeader'
+        - $ref: '#/components/parameters/ZugriffszweckBisHeader'
+      responses:
+        '200':
+          description: Roh-Zeitreihe des Messkanals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MesswertZeitreiheAntwort'
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        OIDC via Keycloak (ADR-0002, Realm `edms`). Bearer-Access-Token,
+        serverseitig gegen die Keycloak-JWKS validiert (JwtAuthGuard). AuthZ
+        (RBAC @Roles + ABAC-PDP) im PolicyInterceptor; Default = deny.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.local/realms/edms/protocol/openid-connect/auth
+          tokenUrl: https://auth.example.local/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    StandortIdPath:
+      name: standortId
+      in: path
+      required: true
+      description: Standort-ID (energy.standort.id, ADR-0010).
+      schema: { type: string, format: uuid }
+    MesskanalIdPath:
+      name: messkanalId
+      in: path
+      required: true
+      description: Messkanal-ID (energy.messkanal.id).
+      schema: { type: string, format: uuid }
+    VonParam:
+      name: von
+      in: query
+      required: true
+      description: Intervall-Untergrenze (UTC, inklusive) — halboffenes Intervall `[von, bis)`.
+      schema: { type: string, format: date-time }
+    BisParam:
+      name: bis
+      in: query
+      required: true
+      description: Intervall-Obergrenze (UTC, EXKLUSIVE) — halboffenes Intervall `[von, bis)`.
+      schema: { type: string, format: date-time }
+    AufloesungParam:
+      name: aufloesung
+      in: query
+      required: true
+      description: Zeitauflösung der Aggregation (`time_bucket`, Apache-2-konform).
+      schema: { $ref: '#/components/schemas/Aufloesung' }
+    InklusiveUnterknotenParam:
+      name: inklusiveUnterknoten
+      in: query
+      required: false
+      description: Subtree einbeziehen (`pfad @> ARRAY[standortId]`) — Default `true`.
+      schema: { type: boolean, default: true }
+    StichtagParam:
+      name: stichtag
+      in: query
+      required: false
+      description: >
+        Stichtag für die Zähler-Standort-Zuordnung (ADR-0010 D6) — Default
+        `bis` (Zähler-Bestand "wie am Ende der Periode").
+      schema: { type: string, format: date-time }
+    ZugriffszweckHeader:
+      name: X-Edms-Zugriffszweck
+      in: header
+      required: false
+      description: >
+        Break-glass-Zweck-Code (whitelisted, kein Freitext — z. B.
+        `stoerungsdiagnose`, ADR-0008 §16/D4). PFLICHT für einen `permit`.
+      schema: { type: string, maxLength: 64 }
+    ZugriffszweckZaehlerIdHeader:
+      name: X-Edms-Zugriffszweck-Zaehler-Id
+      in: header
+      required: false
+      description: Zähler-Pseudonym-Referenz, an die sich der Zweck bindet (ADR-0008 §16/D4).
+      schema: { type: string, format: uuid }
+    ZugriffszweckVonHeader:
+      name: X-Edms-Zugriffszweck-Von
+      in: header
+      required: false
+      description: Break-glass-Fenster-Untergrenze (UTC) — dient NUR der PDP-Fensterprüfung, unabhängig von `von`.
+      schema: { type: string, format: date-time }
+    ZugriffszweckBisHeader:
+      name: X-Edms-Zugriffszweck-Bis
+      in: header
+      required: false
+      description: Break-glass-Fenster-Obergrenze (UTC) — `bis - von <= MAX_FENSTER_TAGE`.
+      schema: { type: string, format: date-time }
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe (Validierung fehlgeschlagen, z. B. `von >= bis`). PII-frei.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Kein/ungültiges/abgelaufenes Access-Token (AuthN, JwtAuthGuard).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: >
+        AuthZ-Ablehnung (RBAC/ABAC, PolicyInterceptor) — Rolle fehlt oder
+        (Route B) break-glass-Zweck fehlt/ungültig/Fenster überschritten.
+        Wird auditiert. PII-frei, strukturierter Grund.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NichtGefunden:
+      description: Ressource nicht gefunden (Standort bzw. Messkanal).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unerwartet:
+      description: Unerwarteter Fehler. PII-/stacktrace-frei (DS-10).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: Fehlerobjekt nach RFC 9457 (application/problem+json).
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri, default: 'about:blank' }
+        title: { type: string }
+        status: { type: integer, minimum: 100, maximum: 599 }
+        detail:
+          type: string
+          description: Menschenlesbare, PII-freie Detailbeschreibung.
+        instance: { type: string, format: uri }
+
+    Aufloesung:
+      type: string
+      enum: [stunde, tag, monat]
+
+    MessgroesseArt:
+      type: string
+      enum: [kumulativ_zaehlerstand, intervall_verbrauch]
+
+    MesswertQualitaet:
+      type: string
+      enum: [gemessen, geschaetzt, korrigiert, ersatzwert]
+      description: V0002/V0013/V0014-Kanon — NIEMALS als Zahlencode vergleichen (nur über `measurement.rang()` in der DB).
+
+    MesswertHerkunft:
+      type: string
+      enum: [ingest_live, backfill, manuell, import_altsystem]
+
+    VerbrauchAggregatPunkt:
+      type: object
+      additionalProperties: false
+      required: [zeitpunkt, messgroesse, einheit, wert]
+      description: >
+        EIN Punkt der aggregierten Zeitreihe — existiert NUR für Buckets mit
+        belastbarem Wert (Lücken fehlen hier, s. `metadaten.erkannteLuecken`).
+      properties:
+        zeitpunkt: { type: string, format: date-time }
+        messgroesse: { type: string }
+        einheit: { type: string }
+        wert: { type: number }
+
+    VerbrauchAggregatMetadaten:
+      type: object
+      additionalProperties: false
+      required: [einbezogeneZaehler, einbezogeneKanaele, ausgelasseneUntermessungen, erkannteLuecken]
+      properties:
+        einbezogeneZaehler:
+          type: integer
+          minimum: 0
+          description: Anzahl der zum Stichtag unter dem Knoten verorteten Zähler.
+        einbezogeneKanaele:
+          type: integer
+          minimum: 0
+          description: >-
+            Anzahl der aktiven Hauptmessungen dieser Zähler. Untermessungen sind
+            nicht enthalten, s. `ausgelasseneUntermessungen`.
+        ausgelasseneUntermessungen:
+          type: integer
+          minimum: 0
+          description: >-
+            Anzahl der aktiven Kanäle, die als Untermessung gekennzeichnet sind
+            und deshalb nicht in die Kurve eingehen. Sie messen eine Teilmenge
+            einer Hauptmessung; doppelt gezählt ergäbe das einen zu hohen
+            Verbrauch.
+        erkannteLuecken:
+          type: integer
+          minimum: 0
+          description: Anzahl (Zeit-Bucket × Messgrößen/Einheiten-Gruppe) OHNE belastbaren Wert.
+
+    VerbrauchAggregatAntwort:
+      type: object
+      additionalProperties: false
+      required: [zeitreihe, metadaten]
+      properties:
+        zeitreihe:
+          type: array
+          items: { $ref: '#/components/schemas/VerbrauchAggregatPunkt' }
+        metadaten:
+          $ref: '#/components/schemas/VerbrauchAggregatMetadaten'
+
+    MesswertRohPunkt:
+      type: object
+      additionalProperties: false
+      required: [ts, wert, qualitaet, herkunft]
+      properties:
+        ts: { type: string, format: date-time }
+        wert: { type: number }
+        qualitaet: { $ref: '#/components/schemas/MesswertQualitaet' }
+        herkunft: { $ref: '#/components/schemas/MesswertHerkunft' }
+
+    MesswertZeitreiheAntwort:
+      type: object
+      additionalProperties: false
+      required: [messkanalId, messgroesse, einheit, art, werte]
+      properties:
+        messkanalId: { type: string, format: uuid }
+        messgroesse: { type: string }
+        einheit: { type: string }
+        art: { $ref: '#/components/schemas/MessgroesseArt' }
+        werte:
+          type: array
+          items: { $ref: '#/components/schemas/MesswertRohPunkt' }

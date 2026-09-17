@@ -1,0 +1,252 @@
+# EDMS Dev-Stack — PostgreSQL 16 + TimescaleDB (ADR-0001 §10.5, Abschnitt 4.1 "F4")
+#                  + Keycloak (ADR-0002 Teil B, Phase 4 AP-A)
+#
+# Ursprünglich bewusst schlank (User-Entscheidung F4, ADR-0001 Abschnitt 4.1):
+# NUR der Datenbank-Dienst war Teil dieses Compose-Stacks. Keycloak kommt
+# jetzt mit ADR-0002 (Auth-Modul, Phase 4, AP-A) als eigener Netzwerkdienst
+# über die Netzwerkgrenze hinzu (`.claude/rules/dependencies.md`: Keycloak
+# ist als unmodifizierter Dienst über API/Protokoll zulässig, Apache-2.0,
+# siehe `docs/architecture/dependency-log.md`). MinIO und OpenSearch bleiben
+# vertagt auf ihre jeweiligen Fach-Features.
+#
+# FÖRDERAUFLAGE (.claude/rules/dependencies.md, "TimescaleDB: nur
+# Apache-2-Edition"): das Image-Suffix "-oss" ist ZWINGEND. Nur die
+# Apache-2-lizenzierte Community-OSS-Edition darf verwendet werden — das
+# Image OHNE "-oss"-Suffix bündelt TSL-lizenzierte Features (Compression-/
+# Retention-/Continuous-Aggregate-Policies), die laut Dependency-Regel im
+# Produkt verboten sind (siehe auch dieselbe Regel für die entsprechenden
+# SQL-Anweisungen in Migrationen).
+#
+# VERSIONSHINWEIS: Dieses File wurde im Rahmen von AP3 OHNE Netzzugriff
+# erstellt (Arbeitsauftrag: "kein Netzzugriff nötig — nur Dateien"). Der
+# gepinnte Tag unten (2.15.3-pg16-oss) ist nach bestem Wissen ein
+# existierender, mit PostgreSQL 16 kompatibler "-oss"-Tag — bewusst
+# konservativ gewählt. VOR DEM ERSTEN `docker compose pull`/`up` bitte gegen
+# die aktuelle Tag-Liste verifizieren:
+#   https://hub.docker.com/r/timescale/timescaledb/tags
+# und diesen Kommentar danach aktualisieren/entfernen. Ein künftiges
+# Versions-Update läuft — analog zum Action-Pinning in der CI (ADR-0001
+# §10.3) — über eine bewusste, dokumentierte Änderung dieser Datei, nicht
+# über einen "latest"-Tag (Reproduzierbarkeit, Erfolgsmetrik M6).
+
+name: edms-dev
+
+services:
+  postgres:
+    image: timescale/timescaledb:2.15.3-pg16-oss
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-edms}
+      POSTGRES_USER: ${POSTGRES_USER:-edms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_local_dev_only}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - edms-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-edms} -d ${POSTGRES_DB:-edms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Keycloak (ADR-0002 Teil B §14/§16, Phase 4 AP-A) — Identitäts-/AuthN-Dienst.
+  #
+  # VERSIONSPINNING (verifiziert 2026-07-13, siehe deployment/keycloak/README.md
+  # "Verifikations-Protokoll"): Die ADR-Skizze nannte illustrativ
+  # "quay.io/keycloak/keycloak:26.0" ("z. B."). Vor dem ersten Pull real gegen
+  # die Quay-Tag-Liste geprüft (`docker manifest inspect` + Quay-API):
+  # Tag "26.0" ist ein FLOATING Tag von Feb. 2025 (über ein Jahr alt gegenüber
+  # dem aktuellen Stand) — verstößt gegen die devops-lead-Hartregel
+  # "Base-Image nicht älter als 30 Tage". Stattdessen exakt auf den aktuellen
+  # Patch-Release der 26.x-Linie gepinnt: 26.7.0 (veröffentlicht 2026-07-09,
+  # < 30 Tage alt). Lizenz: Apache-2.0 ✓ (Whitelist, `.claude/rules/dependencies.md`),
+  # siehe `docs/architecture/dependency-log.md`. Ein künftiges Versions-Update
+  # läuft — analog zum Timescale-Pin oben — über eine bewusste, dokumentierte
+  # Änderung dieser Zeile, kein "latest"-Tag.
+  #
+  # REALM-IMPORT: `--import-realm` liest jede JSON-Datei aus
+  # `/opt/keycloak/data/import` (read-only-Mount von `../keycloak`,
+  # secret-freier Realm-Export, siehe `deployment/keycloak/realm-edms.json`
+  # + zugehöriges README). Import läuft nur beim ERSTEN Start einer leeren
+  # `dev-file`(H2)-Datenbank — s. u. "bewusst keine Persistenz".
+  #
+  # HEALTHCHECK: Keycloak 26 exponiert Health-Endpunkte standardmäßig auf dem
+  # separaten Management-Port 9000 (`/health/ready`), NICHT auf 8080 — verifiziert
+  # gegen die gepinnte Version. `health-enabled` ist ein Build-Time-Flag mit
+  # Default `false` und muss explizit gesetzt werden (`--health-enabled=true`,
+  # zusammen mit `start-dev` in EINEM Kommando — Keycloaks Dev-Modus baut das
+  # bei Bedarf automatisch mit). Das Basis-Image bringt aus Security-Gründen
+  # kein `curl` mit; der Healthcheck nutzt daher Bashs `/dev/tcp`-Redirection
+  # (gegen den gepinnten Container getestet, s. README "Verifikations-Protokoll").
+  #
+  # BOOTSTRAP-ADMIN: Keycloak 26 nutzt `KC_BOOTSTRAP_ADMIN_USERNAME`/
+  # `KC_BOOTSTRAP_ADMIN_PASSWORD` (verifiziert; die älteren `KEYCLOAK_ADMIN`/
+  # `KEYCLOAK_ADMIN_PASSWORD`-Variablen aus Vor-26-Images werden NICHT mehr
+  # ausgewertet). Die `.env`-seitigen Variablennamen bleiben bewusst
+  # `KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD` (menschenlesbar, konsistent mit
+  # der Aufgabenstellung) und werden hier auf die korrekten Keycloak-26-Env-
+  # Namen gemappt.
+  #
+  # KEINE ECHTE PERSISTENZ (Dev, bewusst): kein benanntes Volume für die
+  # `dev-file`(H2)-Datenbank. Jeder Container-Neustart mit frischem Container
+  # importiert den Realm neu aus dem Read-only-Mount — das IST der
+  # M4-Reproduzierbarkeits-Nachweis. DE-Only/DS-09-Hosting ist eine reine
+  # Prod-Auflage (ADR-0002 §7.1/§16) und im Dev mit synthetischen Daten
+  # irrelevant.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.0
+    restart: unless-stopped
+    command: ["start-dev", "--health-enabled=true", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme_local_dev_only}
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+      - "${KEYCLOAK_MANAGEMENT_PORT:-9000}:9000"
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'HEAD /health/ready HTTP/1.0\r\n\r\n' >&3; grep -q '200' <&3",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  # Mosquitto (ADR-0005 §13–§17, Phase 4) — MQTT-Broker und damit die
+  # EDMS-SYSTEMGRENZE für die Messdaten-Ingestion.
+  #
+  # TOPOLOGIE (F2, ADR-0005 §13): ChirpStack liegt bewusst AUSSERHALB dieses
+  # Stacks — das EDMS holt Uplinks ausschliesslich über MQTT. Im Dev speist
+  # deshalb nur der synthetische Publisher ein; es fliessen KEINE realen
+  # personenbezogenen Messdaten (synthetic-only, Ingest-Gate ZU, §0/§19).
+  #
+  # LIZENZ: EPL-2.0/EDL-1.0, läuft als eigenständiger Dienst über die
+  # Netzwerkgrenze — zulässig nach `.claude/rules/dependencies.md`
+  # ("Dienste über Netzwerkgrenze"), analog zu Keycloak/PostgreSQL.
+  #
+  # VERSIONSPINNING: exakter Patch-Tag statt "latest" (Reproduzierbarkeit,
+  # analog zu den beiden Diensten oben). Ein Update läuft über eine bewusste
+  # Änderung dieser Zeile.
+  #
+  # DEV-PROFIL: Klartext-Listener auf 1883, aber MIT Authentifizierung und
+  # Least-Privilege-ACL (Worker nur `read`, Publisher nur `write` — s.
+  # `../mosquitto/acl`). Bewusst kein `allow_anonymous`: die Rollentrennung
+  # soll schon im Dev ehrlich greifen. VOR REAL-INGEST zwingend TLS 1.3 +
+  # mTLS (SA-3) und Verschlüsselung-at-Rest des Persistenz-Volumes (SEC-3) —
+  # beides als Gate-Auflage in ADR-0005 §31 geführt.
+  #
+  # KEIN HEALTHCHECK: Das Image bringt weder `curl` noch eine Bash mit
+  # /dev/tcp-Redirection mit; ein `mosquitto_sub`-Check müsste entweder
+  # Credentials in die Compose-Datei schreiben oder gegen die ACL verstossen
+  # ($SYS ist keiner der beiden Identitäten erlaubt). Der Worker bringt für
+  # genau diesen Fall einen eigenen Reconnect-Backoff mit (§18).
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    restart: unless-stopped
+    ports:
+      - "${MOSQUITTO_PORT:-1883}:1883"
+    volumes:
+      - ../mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ../mosquitto/acl:/mosquitto/config/acl:ro
+      - ../mosquitto/passwd:/mosquitto/config/passwd:ro
+      - edms-mosquitto-data:/mosquitto/data
+
+  # ===================================================================
+  # Ingest-Worker (ADR-0011 C3) — als betriebener Dienst statt als
+  # handgestarteter `node`-Aufruf.
+  # ===================================================================
+  #
+  # UNTER EINEM PROFIL, UND DAS IST ABSICHT.
+  # `docker compose up -d` bleibt unveraendert (Postgres, Keycloak,
+  # Mosquitto). Der Worker kommt nur mit `--profile ingest` dazu. Grund: Er
+  # braucht ein GEBAUTES Image, und ein Compose-Up, das bei jedem Aufruf
+  # erst ein mehrminuetiges Build ausloest, waere fuer den taeglichen
+  # Stammdaten-/Frontend-Betrieb ein Rueckschritt. Wer den Ingest-Pfad
+  # braucht, sagt es:
+  #
+  #   docker compose -f deployment/docker/docker-compose.dev.yml \
+  #     --profile ingest up -d --build ingest-worker
+  #
+  # ZWEI PROZESSE, EIN IMAGE (s. Dockerfile.backend). Getrennt wird ueber
+  # `command`, nicht ueber das Image.
+  #
+  # RECHTE: Der Worker faehrt auf `edms_ingest_worker` — der spaltenscharfen
+  # Rolle aus RL-1/V0010, nicht auf `edms_app`. Der Unterschied steckt
+  # ausschliesslich in `EDMS_INGEST_DATABASE_URL`; ein hier versehentlich
+  # gesetztes `DATABASE_URL` wuerde ihn NICHT erweitern, weil der Worker
+  # diese Variable gar nicht liest.
+  #
+  # FAIL-CLOSED: Fehlende oder unplausible Konfiguration faengt der
+  # Startup-Selbstcheck des Workers ab (`worker-main.ts`) — er beendet sich
+  # mit Exit-Code 1, statt halb zu laufen. Compose erzwingt hier deshalb
+  # KEINE Variablen ueber `${VAR:?}`: Das wuerde auch ein reines
+  # `up postgres` scheitern lassen, und die Pruefung gehoert ohnehin in den
+  # Prozess, der sie durchsetzen kann.
+  ingest-worker:
+    profiles: ["ingest"]
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.backend
+    image: edms-backend:dev
+    command: ["node", "dist/ingest-worker/worker-main.js"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    environment:
+      # Dienstnamen des Compose-Netzes, NICHT localhost — im Container ist
+      # `localhost` der Container selbst.
+      EDMS_INGEST_DATABASE_URL: ${EDMS_INGEST_DATABASE_URL_CONTAINER:-postgresql://edms_ingest_worker_login:DevOnlyIngestWorker2026@postgres:5432/edms}
+      EDMS_INGEST_MQTT_URL: ${EDMS_INGEST_MQTT_URL_CONTAINER:-mqtt://mosquitto:1883}
+      EDMS_INGEST_MQTT_CLIENT_ID: ${EDMS_INGEST_MQTT_CLIENT_ID:-edms-ingest-worker}
+      EDMS_INGEST_MQTT_USERNAME: ${EDMS_INGEST_MQTT_USERNAME:-}
+      EDMS_INGEST_MQTT_PASSWORD: ${EDMS_INGEST_MQTT_PASSWORD:-}
+      EDMS_INGEST_MQTT_TOPIC: ${EDMS_INGEST_MQTT_TOPIC:-}
+      EDMS_INGEST_QUELLE_CODE: ${EDMS_INGEST_QUELLE_CODE:-standard}
+      # Betriebsmodus. `synthetic_only=true` ist der Zustand, in dem das
+      # ADR-0004-Ingest-Gate geschlossen ist — die Vorgabe hier ist bewusst
+      # die restriktive.
+      EDMS_ENV_CLASS: ${EDMS_ENV_CLASS:-dev}
+      EDMS_SYNTHETIC_ONLY: ${EDMS_SYNTHETIC_ONLY:-true}
+      EDMS_INGEST_BROKER_MODE: ${EDMS_INGEST_BROKER_MODE:-}
+      # Dev-Krypto. NUR Dev: Im produktiven Pfad kommen beide aus KMS/Vault
+      # und NIE aus einer Umgebungsvariablen (ADR-0005 §26.3 SEC-8).
+      EDMS_DEV_KMS_MASTER_KEY: ${EDMS_DEV_KMS_MASTER_KEY:-}
+      EDMS_DEV_BLIND_INDEX_PEPPER: ${EDMS_DEV_BLIND_INDEX_PEPPER:-}
+    # Der Worker haelt keinen Zustand im Dateisystem — sein Zustand steht in
+    # `ingest.quelle_status` (V0039). Kein Volume.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+# VOLUME-NAMEN: bewusst gepinnt, damit vorhandene Dev-Daten beim Umbenennen
+# des Compose-Projekts nicht verwaisen — ABER ueber `EDMS_VOLUME_PREFIX`
+# ueberschreibbar.
+#
+# WARUM DAS NOETIG IST (beobachtet 2026-09-05): Ohne den Praefix teilt ein
+# zweiter Stack, der nur ueber `docker compose -p <anderer-name>` getrennt
+# wurde, STILL dasselbe Datenverzeichnis — Compose warnt, startet aber. Bei
+# Postgres heisst das zwei Postmaster auf einem Datenverzeichnis; der zweite
+# uebernimmt die Lock-Datei, der erste faehrt sich daraufhin selbst herunter
+# (`data directory lock file is invalid`). Wer eine zweite Instanz braucht,
+# setzt jetzt `EDMS_VOLUME_PREFIX=<etwas anderes>` und bekommt eigene Volumes.
+#
+# Der Default ist unveraendert `edms` -> `edms-postgres-data`: bestehende
+# Installationen finden ihre Daten dort, wo sie liegen.
+volumes:
+  edms-postgres-data:
+    name: ${EDMS_VOLUME_PREFIX:-edms}-postgres-data
+  # Offline-Puffer des Brokers (persistente Session + QoS 1, ADR-0005 §15).
+  # SEC-3: im Produktivprofil muss dieses Volume verschlüsselt-at-Rest liegen —
+  # es hält bis zur Zustellung Uplinks inkl. Topic (mit Klartext-DevEUI!).
+  edms-mosquitto-data:
+    name: ${EDMS_VOLUME_PREFIX:-edms}-mosquitto-data

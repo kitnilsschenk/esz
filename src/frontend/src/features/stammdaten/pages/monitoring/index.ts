@@ -1,0 +1,1 @@
+export { VollstaendigkeitDashboardPage } from './VollstaendigkeitDashboardPage';

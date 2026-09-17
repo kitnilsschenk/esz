@@ -1,0 +1,38 @@
+-- V0001__baseline_extensions.down.sql
+--
+-- Bewusst KEIN `DROP EXTENSION` -- dokumentierte Abweichung vom naheliegenden
+-- "Down = exaktes Gegenteil von Up". Begründung:
+--
+--   1. Instanz-globale, geteilte Ressourcen: `timescaledb` und `btree_gist`
+--      sind nicht auf dieses Feature beschränkt. Das voraussichtlich
+--      folgende ADR-0003 (Audit-Log-Hypertable) wird `timescaledb`
+--      voraussichtlich ebenfalls brauchen. Ein Rollback dieser
+--      Baseline-Migration darf kein zwischenzeitlich von anderem Code
+--      genutztes Objekt kommentarlos entfernen.
+--   2. Rollback-Reihenfolge/-Risiko: Der Runner rollt pro `down`-Aufruf
+--      genau eine Migration zurück (tools/migrate/README.md). Selbst wenn
+--      V0002 (Kern-Datenmodell, Schema-CASCADE) bereits zurückgerollt
+--      wurde, bliebe ein `DROP EXTENSION ... CASCADE` an dieser Stelle ein
+--      Instanz-weiter Eingriff mit Blast-Radius über dieses Feature hinaus
+--      -- für einen Vorgang, der in der Praxis so gut wie nie gebraucht
+--      wird (Erweiterungen werden operativ kaum deinstalliert).
+--   3. Betriebsentscheid statt Migrations-Rollback: Ein tatsächlicher
+--      Erweiterungs-Ausbau ist ein Instanz-/Betriebsentscheid
+--      (devops-lead), kein reiner Migrations-Rollback-Schritt.
+--
+-- Wer diese Migration auf einer isolierten Dev-/Test-Instanz wirklich
+-- vollständig zurückrollen will, tut das bewusst und manuell außerhalb des
+-- Runners -- NICHT über diese Datei:
+--
+--   DROP EXTENSION IF EXISTS btree_gist;
+--   DROP EXTENSION IF EXISTS timescaledb CASCADE;  -- CASCADE vorher prüfen:
+--     entfernt alle Hypertables/abhängigen Objekte dieser Instanz, nicht nur
+--     die aus V0002.
+--
+-- Diese Datei ist ein bewusster No-Op (leere Anweisung), damit der Runner
+-- (der eine gepaarte .down.sql zwingend voraussetzt, tools/migrate/README.md)
+-- ein gültiges Rollback-Ziel für V0001 hat, ohne Instanz-globale Objekte
+-- destruktiv anzufassen. Getestet auf Dev (docker-compose.dev.yml,
+-- timescaledb:2.15.3-pg16-oss): Ausführung committet ohne Fehler, beide
+-- Erweiterungen bleiben installiert, `schema_migrations`-Eintrag für V0001
+-- wird korrekt entfernt.

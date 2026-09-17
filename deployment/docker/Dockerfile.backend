@@ -1,0 +1,143 @@
+# EDMS-Backend-Image — API **und** Ingest-Worker aus EINEM Artefakt
+# (ADR-0011 C3: „Ingest-Worker als betriebener Dienst").
+#
+# WARUM EIN IMAGE FUER ZWEI PROZESSE
+# ----------------------------------
+# API (`dist/main.js`) und Ingest-Worker (`dist/ingest-worker/worker-main.js`)
+# sind ZWEI Prozesse mit unterschiedlichen Rechten (der Worker faehrt auf der
+# spaltenscharfen Rolle `edms_ingest_worker`, RL-1) — aber sie teilen den
+# gesamten Quellbaum, dieselben Abhaengigkeiten und denselben Compiler-Lauf.
+# Zwei Images zu bauen hiesse, denselben Code zweimal zu uebersetzen und die
+# beiden Staende auseinanderlaufen zu lassen. Getrennt wird deshalb ueber das
+# START-KOMMANDO, nicht ueber das Image.
+#
+# Der Unterschied in den Rechten bleibt davon unberuehrt: Er steckt in der
+# Datenbank-Rolle der jeweiligen Verbindungszeichenkette
+# (`EDMS_INGEST_DATABASE_URL` vs. `DATABASE_URL`), nicht im Dateisystem.
+#
+# MEHRSTUFIG, DAMIT DAS LAUFZEIT-IMAGE KEINEN COMPILER TRAEGT
+# -----------------------------------------------------------
+# Stufe `build` hat pnpm, TypeScript und die dev-Abhaengigkeiten; Stufe
+# `runtime` bekommt ausschliesslich `dist/` und die Produktiv-Abhaengigkeiten.
+# Ein TypeScript-Compiler im Produktionsimage waere zusaetzliche
+# Angriffsflaeche ohne jeden Nutzen.
+#
+# VERSIONSPINNING (ADR-0001 §10.3, dieselbe Regel wie beim Action-Pinning der
+# CI und beim Postgres-Image): KEIN `latest`. Die Basis ist auf eine
+# Minor-Version festgelegt; ein Update ist eine bewusste, dokumentierte
+# Aenderung dieser Datei.
+#
+# `node:22-bookworm-slim`: Node 22 erfuellt `engines.node >= 22` aus der
+# Root-`package.json`. `-slim` statt `-alpine`, weil `alpine` musl statt glibc
+# nutzt — fuer die nativen Anteile von `pg`/`mqtt` ist die glibc-Variante die
+# konservativere Wahl, und der Groessenunterschied traegt diese Entscheidung
+# nicht.
+#
+# LIZENZ (`.claude/rules/dependencies.md`): Das offizielle Node-Image steht
+# unter MIT (Node.js selbst) auf einer Debian-Basis; es wird UNMODIFIZIERT
+# verwendet. Die Anwendungsabhaengigkeiten durchlaufen unveraendert das
+# License-Gate der CI — dieses Dockerfile fuegt keine hinzu.
+
+# =====================================================================
+# Stufe 1 — Build
+# =====================================================================
+FROM node:22.11.0-bookworm-slim AS build
+
+WORKDIR /repo
+
+# Erst die Manifeste, dann der Rest: Solange sich weder Lockfile noch
+# `package.json` aendern, bleibt die Installations-Schicht im Build-Cache.
+# Kopiert wird der VOLLSTAENDIGE Workspace-Satz — pnpm verlangt fuer
+# `--frozen-lockfile` jedes im Lockfile genannte Paket, auch die hier nicht
+# gebauten (`frontend`, `tools/migrate`).
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY src/backend/package.json    src/backend/package.json
+COPY src/frontend/package.json   src/frontend/package.json
+COPY src/shared/package.json     src/shared/package.json
+COPY tools/migrate/package.json  tools/migrate/package.json
+
+# PNPM — Version aus der EINEN Quelle abgeleitet, die es dafuer gibt:
+# `packageManager` in der Root-`package.json`. Sie wird hier NICHT wiederholt;
+# eine zweite Stelle mit derselben Versionsnummer waere die Sorte Duplikat,
+# die still auseinanderlaeuft.
+#
+# WARUM NICHT `corepack enable` (der naheliegende Weg):
+# Das mit `node:22.11.0` gebuendelte corepack traegt einen veralteten
+# Signaturschluessel fuer die pnpm-Registry und bricht mit
+# „Cannot find matching keyid" ab — verifiziert am 2026-09-05 in genau diesem
+# Build. Die verbreiteten Auswege sind beide schlechter:
+# `COREPACK_INTEGRITY_KEYS=0` schaltet die Signaturpruefung ab (eine
+# Lieferketten-Kontrolle gegen eine Bequemlichkeit einzutauschen ist der
+# falsche Handel, `.claude/rules/dependencies.md`), und `corepack@latest` waere
+# ein ungepinnter Bezug an genau der Stelle, an der wir pinnen wollten.
+# `npm install -g pnpm@<exakte Version>` laesst die npm-Registry-Integritaet
+# unangetastet und bleibt exakt festgelegt.
+RUN PNPM_VERSION="$(node -p "require('./package.json').packageManager.split('@')[1].split('+')[0]")" \
+ && echo "pnpm-Version aus package.json: ${PNPM_VERSION}" \
+ && npm install -g "pnpm@${PNPM_VERSION}"
+
+RUN pnpm install --frozen-lockfile
+
+# Jetzt der Quellcode. Geteilte Tooling-Configs liegen im Repo-Wurzelverzeichnis
+# (pnpm-workspace.yaml-Kommentar) und werden von `tsconfig.build.json` ueber
+# `extends` gezogen — ohne sie schlaegt der Compilerlauf fehl.
+COPY tsconfig.base.json ./
+COPY src/shared  src/shared
+COPY src/backend src/backend
+
+RUN pnpm --filter @edms/backend build
+
+# Produktiv-Abhaengigkeiten in einem eigenen Baum isolieren. `--prod` laesst
+# TypeScript, ESLint und Vitest weg; `deploy` legt einen in sich geschlossenen
+# `node_modules`-Baum an, der ohne den umgebenden Workspace laeuft.
+#
+# `--legacy` ist hier die RICHTIGE Wahl, nicht ein Ausweichen: pnpm 10 verlangt
+# fuer den neuen Deploy-Pfad `inject-workspace-packages=true` — eine
+# Einstellung, die regelt, wie WORKSPACE-INTERNE Abhaengigkeiten in das Ziel
+# kopiert werden. `@edms/backend` hat davon keine einzige (verifiziert:
+# `dependencies` enthaelt ausschliesslich Fremdpakete, `@edms/shared` wird
+# NICHT als Laufzeit-Abhaengigkeit gefuehrt). Die Workspace-weite Einstellung
+# umzustellen, um ein Verhalten zu erreichen, das hier gar nicht zum Tragen
+# kommt, waere eine Aenderung mit Wirkung auf alle vier Pakete zugunsten
+# eines, das sie nicht braucht.
+RUN pnpm --filter @edms/backend --prod deploy --legacy /laufzeit
+
+# =====================================================================
+# Stufe 2 — Laufzeit
+# =====================================================================
+FROM node:22.11.0-bookworm-slim AS runtime
+
+# `dumb-init` als PID 1: Node als PID 1 bekommt KEINE Standard-Signalbehandlung
+# vom Kernel — ein `SIGTERM` an einen Container ohne Init-Prozess laeuft ins
+# Leere, wenn der Handler noch nicht registriert ist, und Docker greift nach
+# der Frist zu `SIGKILL`. Genau das darf beim Ingest-Worker NICHT passieren:
+# Sein `shutdown()` beendet die laufende Verarbeitung geordnet und schliesst
+# die MQTT-Sitzung; ein harter Abbruch hinterliesse eine Statuszeile, die
+# `verbunden=true` behauptet (ADR-0011 O8 — genau der Fall, gegen den der
+# Herzschlag gebaut wurde).
+RUN apt-get update \
+ && apt-get install --no-install-recommends -y dumb-init \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Nicht als root. Das Image bringt bereits einen unprivilegierten Nutzer
+# `node` (uid 1000) mit — ein eigener waere nur eine weitere Zeile ohne
+# zusaetzlichen Schutz.
+COPY --from=build --chown=node:node /laufzeit/node_modules ./node_modules
+COPY --from=build --chown=node:node /laufzeit/package.json ./package.json
+COPY --from=build --chown=node:node /repo/src/backend/dist ./dist
+
+USER node
+
+# KEIN `EXPOSE` und KEIN Standard-Port: Dieses Image faehrt in der einen
+# Rolle einen HTTP-Dienst und in der anderen einen Prozess ganz ohne Port.
+# Ein Port im Image waere eine Behauptung, die fuer den Worker falsch ist.
+
+ENTRYPOINT ["dumb-init", "--"]
+
+# Default ist die API. Der Worker wird ueber `command:` im Compose-/K8s-Manifest
+# gewaehlt:
+#   command: ["node", "dist/ingest-worker/worker-main.js"]
+CMD ["node", "dist/main.js"]

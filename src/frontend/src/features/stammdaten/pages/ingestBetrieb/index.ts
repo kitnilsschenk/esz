@@ -1,0 +1,1 @@
+export { IngestBetriebPage } from './IngestBetriebPage';

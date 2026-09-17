@@ -1,0 +1,54 @@
+-- V0001__baseline_extensions.sql
+--
+-- ADR-Bezug: docs/adr/ADR-0004-kern-datenmodell-energie.md (Status: accepted,
+-- Teil B "Phase-2-Design"); Schema-Skizze:
+-- schemas/database/adr-0004-kern-datenmodell.md, Abschnitt 1
+-- ("CREATE EXTENSION IF NOT EXISTS btree_gist").
+-- Design-Owner: technical-director. Lead-Review Teil B (2026-07-09,
+-- eingearbeitet, ADR Abschnitt 20): database-lead + timescale-engineer.
+-- compliance-director: Phase 1 ohne Veto (Risiko-Flag HOCH, sechs
+-- Gate-Bedingungen §7.1 + fünf rote Linien §7.2 mitgetragen). Phase 3
+-- (DSFA/RVT/TOMs, ADR §7.3, offene Punkte O2/O4 in §20.1) steht noch aus --
+-- diese Migration legt ausschließlich Erweiterungen an, keine
+-- personenbezogenen Daten, keine Tabellen.
+--
+-- Reviewer dieser Migration (Vorbereitung /add-migration): database-lead
+-- (Selbst-Review laut Phase-3-Gate-Freigabe) + compliance-director-Freigabe
+-- ausstehend gemäß .claude/rules/database-migrations.md ("PII-Migrationen
+-- nur nach Review database-lead + compliance-director") -- diese Datei
+-- selbst enthält keine PII-Spalte, ist aber Voraussetzung für V0002, die
+-- PII-Spalten enthält.
+--
+-- Zuschnitt-Begründung (V0001 vs. V0002): Erweiterungen sind
+-- Instanz-globale, potenziell von mehreren Features geteilte Infrastruktur
+-- -- `timescaledb` wird voraussichtlich auch vom Audit-Log-Hypertable aus
+-- ADR-0003 gebraucht, `btree_gist` könnte von künftigen EXCLUDE-Constraints
+-- außerhalb dieses Datenmodells mitgenutzt werden. Eine eigene, schlanke
+-- Baseline-Migration hält den Down-Pfad von V0002 (Schema-CASCADE-Drop auf
+-- das Kern-Datenmodell) sauber getrennt von Instanz-globalen Objekten, die
+-- über dieses Feature hinaus weiterverwendet werden können.
+--
+-- timescaledb: NUR die Apache-2-lizenzierte "-oss"-Edition ist zulässig
+-- (.claude/rules/dependencies.md, Abschnitt "TimescaleDB: nur
+-- Apache-2-Edition"; Image `timescale/timescaledb:<tag>-pg16-oss`, siehe
+-- deployment/docker/docker-compose.dev.yml). Das -oss-Image bringt
+-- `shared_preload_libraries=timescaledb` bereits vorkonfiguriert mit, daher
+-- genügt hier `CREATE EXTENSION IF NOT EXISTS timescaledb;` ohne weitere
+-- Server-Konfiguration/Neustart. Sollte das Anlegen auf einer abweichend
+-- konfigurierten Instanz fehlschlagen, ist zuerst `shared_preload_libraries`
+-- zu prüfen (Server-Neustart nötig) -- das ist ein devops-lead-Thema
+-- (Deployment-/Server-Konfiguration), keine SQL-Änderung dieser Migration.
+--
+-- btree_gist: Core-Contrib-Erweiterung (PostgreSQL-Lizenz), wird in V0002
+-- für den EXCLUDE-Constraint auf energy.nutzungsverhaeltnis benötigt
+-- (zeitlicher Overlap-Schutz je Anschlussnutzer/System).
+--
+-- pgcrypto: bewusst NICHT angelegt. Alle Primärschlüssel (UUIDv7) werden
+-- app-seitig erzeugt, ohne DB-Default (database-lead-Votum S4, ADR-0004
+-- Abschnitt 20) -- es gibt keinen DB-seitigen Verschlüsselungs-/
+-- UUID-Bedarf, der pgcrypto rechtfertigen würde. Die Envelope-Verschlüsselung
+-- der PII-Felder (AES-256-GCM) läuft app-seitig, nicht über `pgp_sym_encrypt`
+-- (ADR-0004 Abschnitt 15, verworfene Alternative).
+
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS btree_gist;

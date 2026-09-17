@@ -1,0 +1,46 @@
+-- V0014__messwert_qualitaet_herkunft_wertebereich.sql
+--
+-- ADR-Bezug: docs/adr/ADR-0005-messdaten-ingestion.md §24 (D12 --
+-- idempotenter Schreibpfad, rang()-Vorrangregel). Folge-Migration aus dem
+-- Phase-4-Batch-Review (V0010-V0013): der database-lead hat in V0013 einen
+-- OFFENEN PUNKT markiert -- measurement.messwert.qualitaet/.herkunft tragen
+-- seit V0002 KEIN CHECK auf den gueltigen Wertebereich {0,1,2,3}. User-
+-- Freigabe 2026-07-16: als eigene Migration V0014 ergaenzen.
+--
+-- Review vor Merge (ausstehend): database-lead (Migrations-Entwurf) +
+-- timescale-engineer (CHECK auf Hypertable) -- KEINE PII-Spalte, kein
+-- compliance-director-Pflichtreview (energy/measurement-Fachattribute).
+-- Teil des Phase-4-Kontexts -- NUR Constraint-Haertung, kein Datenpfad;
+-- Ingest-Gate bleibt ZU.
+--
+-- =====================================================================
+-- Warum (Silent-Failure-Luecke schliessen)
+-- =====================================================================
+-- measurement.rang(p_qualitaet, p_herkunft) (V0013) bildet den Wertebereich
+-- {0,1,2,3} per CASE OHNE ELSE ab -- ein aus dem Bereich fallender Wert
+-- liefert NULL. Im idempotenten Upsert (`... ON CONFLICT (messkanal_key, ts)
+-- DO UPDATE ... WHERE rang(EXCLUDED...) > rang(messwert...)`) wuerde ein
+-- NULL-rang die WHERE-Bedingung als NULL (weder wahr noch falsch) auswerten
+-- -- der Upsert wuerde STILL zum No-Op, statt laut zu scheitern. Ein
+-- CHECK-Constraint faengt einen ungueltigen `qualitaet`/`herkunft`-Wert
+-- bereits beim INSERT ab (lauter, frueher Fehler statt stillem Datenverlust).
+--
+-- Wertebereich (V0002/V0013-Kanon, hier verbindlich erzwungen):
+--   qualitaet: 0=gemessen, 1=geschaetzt, 2=korrigiert, 3=ersatzwert
+--   herkunft:  0=ingest_live, 1=backfill, 2=manuell, 3=import_altsystem
+--
+-- =====================================================================
+-- Hypertable-Hinweis
+-- =====================================================================
+-- measurement.messwert ist ein TimescaleDB-Hypertable (V0002). Ein per
+-- `ALTER TABLE ... ADD CONSTRAINT ... CHECK (...)` hinzugefuegtes CHECK gilt
+-- fuer die Roottabelle UND wird von Timescale automatisch auf alle
+-- bestehenden und kuenftigen Chunks propagiert (Apache-2-Kernverhalten,
+-- kein TSL-Feature). Auf der aktuell leeren Dev-/Greenfield-Tabelle ist die
+-- Validierung sofortig (kein Full-Table-Scan-Kostenrisiko). Ergaenzt NUR
+-- Constraints -- KEINE Spalten-/Datenaenderung (append-only, ADR-0004 §14
+-- Abweichung (d) unangetastet).
+
+ALTER TABLE measurement.messwert
+    ADD CONSTRAINT ck_messwert_qualitaet_wertebereich CHECK (qualitaet IN (0, 1, 2, 3)),
+    ADD CONSTRAINT ck_messwert_herkunft_wertebereich  CHECK (herkunft  IN (0, 1, 2, 3));

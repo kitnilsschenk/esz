@@ -1,0 +1,72 @@
+# Public-Export-Exclude-Manifest (ADR-0001, Abschnitt 10.6)
+#
+# Einzige Quelle der Wahrheit für den public-export-guard (CI-Job 10,
+# git-archive-basiert). Format und Zuständigkeit: siehe README.md in diesem
+# Verzeichnis.
+#
+# Baseline (compliance-director-Auflage 1, ADR-0001 Abschnitt 6.1):
+
+# Compliance-Nachweise (DSGVO-Verzeichnis, DSFAs, ISO-27001-Controls,
+# Risiko-Register, Audit-Reports) — niemals öffentlich.
+compliance/
+
+# Studio-Steuerung: Agenten, Skills, Hooks, pfadbezogene Rules — internes
+# Entwicklungs-Tooling, keine Produktinformation.
+.claude/
+
+# Betriebs-/Session-Zustand (Sprints, Releases, interne Planung/Roadmap).
+production/
+
+# Umgebungsvariablen mit potenziellen Secrets. Ausnahme: die dokumentierte
+# Beispieldatei ohne echte Werte bleibt öffentlich.
+.env*
+!.env.example
+
+# macOS-Finder-Metadaten (leaken lokale Verzeichnisstruktur) — Belt-and-
+# Suspenders zusätzlich zu .gitignore (compliance-director, 2026-07-09).
+.DS_Store
+
+# Interne Studio-Steuerung analog .claude/ (Agenten-Hierarchie, Förder-/
+# interner Kontext) — kein Produktbestandteil (compliance-director, 2026-07-09).
+Projektleitlinien
+
+# Hinweis: PDF-Dateien unter compliance/ sind durch die compliance/-Regel
+# oben bereits abgedeckt; kein separater *.pdf-Ausschluss nötig.
+
+# ---------------------------------------------------------------------
+# Design-System — AUSGESCHLOSSEN (User-Entscheidung 2026-09-17)
+# ---------------------------------------------------------------------
+# Die Datei beschreibt die Corporate Identity der KIT Consulting GmbH und ist
+# ueberschrieben "TicKIT Styleguide" — sie gehoert zu einem ANDEREN Produkt
+# des Hauses. Zwei Gruende, beide tragend:
+#
+#   1. Sie in einem EDMS-Repository zu veroeffentlichen, gaebe fremde
+#      Markengestaltung heraus und benennte sie zugleich falsch.
+#   2. Corporate Identity ist Unternehmensgestaltung, nicht Software. Die
+#      Foerderauflage verlangt die Veroeffentlichung des geFOERDERTEN
+#      Produkts, nicht der Hausgestaltung.
+#
+# BEKANNTE FOLGE: Rund zwanzig Dateien im oeffentlichen Baum verweisen in
+# Kommentaren auf sie. Das bricht keinen Build — es sind Kommentare — bleibt
+# aber ein Verweis ins Leere. Wer das aufloesen will, stellt die Verweise auf
+# die Tokens-Datei `src/frontend/src/globals.css` um; dort stehen die Werte,
+# die der Quelltext tatsaechlich benutzt.
+Design-System
+
+# ---------------------------------------------------------------------
+# Das Redaktions-Manifest selbst — es waere sonst die Anleitung zu sich
+# ---------------------------------------------------------------------
+# `redaktion.txt` listet woertlich, welche Begriffe aus dem Export entfernt
+# werden. Mitveroeffentlicht waere die Redaktion Theater: Der Leser bekaeme
+# den Text ohne den Begriff und daneben die Liste, welcher Begriff dort
+# gestanden hat.
+#
+# Der Guard hat das selbst gemeldet — seine Verbotspruefung fand die Begriffe
+# im Manifest, das im Export-Baum lag. Ein Werkzeug, das seine eigene
+# Umgehung bemerkt, hat seinen Zweck erfuellt.
+#
+# `redigiere.py` und `exclude.txt` bleiben dagegen oeffentlich: Das eine ist
+# ein Werkzeug ohne Inhalt, das andere benennt nur die ausgeschlossenen
+# VERZEICHNISSE — dass es eine Compliance-Akte gibt, ist keine Neuigkeit und
+# steht ohnehin in der CI-Konfiguration.
+tools/public-export/redaktion.txt

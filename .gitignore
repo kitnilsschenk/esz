@@ -1,0 +1,52 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+# pnpm (ADR-0001 §10.1) — lokaler Content-Addressed-Store, falls projektlokal
+# konfiguriert (Standard-Store liegt außerhalb des Repos, siehe pnpm-Doku).
+.pnpm-store/
+
+# TypeScript Incremental-Build-Infos (tsc --build)
+*.tsbuildinfo
+
+# Mosquitto-Dev-Credentials — werden lokal per deployment/mosquitto/erzeuge-passwd.sh
+# erzeugt und BEWUSST nicht versioniert (OSS-Publikationspflicht, siehe Skript-Kopf).
+deployment/mosquitto/passwd
+
+# Playwright-Laufartefakte (Screenshots/Traces fehlgeschlagener Browserpruefungen)
+test-results/
+playwright-report/
+
+# --- Eingangsdaten fuer Importlaeufe (NIEMALS versionieren) ---
+# Messreihen, Jahresabrechnungen und sonstige Kundenunterlagen, die zum
+# Import hier abgelegt werden. Das Repo unterliegt der OSS-Publikations-
+# pflicht (LICENSE, Projektleitlinien „Lizenz- & Foerder-Compliance") -- eine
+# Tabelle mit Verbrauchsdaten eines benannten Standorts gehoert dort nicht
+# hinein, auch nicht versehentlich ueber ein `git add -A`.
+#
+# Testfixtures sind synthetisch und liegen NICHT hier, sondern neben ihrem
+# Test (`.claude/rules/tests.md`).
+*.xlsx
+*.xls
+*.csv
+!schemas/**/*.csv
+!tests/**/fixtures/**/*.csv
+importe/
+
+# --- BAFA-Projektunterlagen (NIEMALS versionieren) ---
+# Projektdokumentation, Open-Source-Nachweis und ihre docx-Fassungen sind
+# Unterlagen fuer die Bewilligungsbehoerde, keine Projektartefakte: Sie tragen
+# Foerderdaten, Personalstunden und Stundensaetze, Firmierung, den internen
+# Teil II (Klaerungs- und Aufgabenliste) und je nach Fassung den Namen des
+# Datenschutzbeauftragten. Das Repo unterliegt der OSS-Publikationspflicht
+# (LICENSE, Projektleitlinien „Lizenz- & Foerder-Compliance"), DS-11 verbietet dort
+# personenbezogene Daten -- und in der Historie eines veroeffentlichten
+# Repositories bekommt man sie nur durch Umschreiben wieder heraus.
+#
+# Gilt fuer den GESAMTEN Ordner, ausdruecklich einschliesslich `md2docx.py`
+# (User-Entscheidung 2026-09-16). Die Unterlagen leben ausserhalb des Repos.
+docs/bafa/

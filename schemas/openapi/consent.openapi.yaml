@@ -1,0 +1,805 @@
+# EDMS Consent-API (ADR-0012 B1) — OpenAPI-Contract
+#
+# Status: proposed. ADR-0012 ist ein ENTWURF ohne compliance-director-Votum;
+# diese Spec beschreibt, was gebaut ist, nicht was freigegeben ist.
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Security-Scheme oauth2 als GLOBALER Default — kein öffentlicher Endpoint.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - Alle POST-Routen tragen `Idempotency-Key` (Pflicht).
+#   - KEINE Cursor-Pagination: Es gibt hier keine unbegrenzte Liste. Der
+#     Zweck-Katalog hat fünf Einträge, die Textfassungen wachsen um eine je
+#     Neufassung, und der Consent-Stand betrifft immer GENAU EIN Subjekt.
+#     Eine Blätter-Mechanik wäre Aufwand ohne Fall.
+#
+# WAS DIESE API BEWUSST NICHT KANN:
+#   1. `PATCH`/`DELETE` auf Einwilligungen. Ein Widerruf ist ein POST
+#      (`.../widerruf`) und löscht nichts — die bis dahin erfolgte
+#      Verarbeitung bleibt rechtmäßig (Art. 7 Abs. 3 S. 2 DSGVO), und ihr
+#      Nachweis muss erhalten bleiben. Ein `DELETE` würde suggerieren, dass
+#      etwas verschwindet.
+#   2. Ein digitales Opt-in erfassen. Die dabei nach DS-03 zu
+#      protokollierende IP wäre die des Bearbeiters, nicht die der
+#      betroffenen Person — der Beleg behauptete einen digitalen Vorgang, den
+#      es nie gab. `digital_opt_in` entsteht erst im Nutzerportal
+#      (ADR-0012 Stufe D).
+#   3. Den Ingest steuern. Die Wirkung der Einwilligung auf den Schreibpfad
+#      ist ADR-0012 E5/Stufe C und NICHT freigegeben.
+#   4. IP oder User-Agent ausgeben. Sie stehen feldverschlüsselt im Beleg und
+#      verlassen ihn über diese Schnittstelle nicht — auch nicht für
+#      `compliance-auditor`.
+#
+# Fachlicher Kern: `src/backend/src/consent/einwilligung.service.ts`,
+# `migrations/V0044__consent_einwilligungsverwaltung.sql`,
+# `migrations/V0045__audit_einwilligung_events.sql`.
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Consent-API (Einwilligungsverwaltung)
+  version: 0.2.0
+  summary: >
+    Versionierte Einwilligungserklärungen, belegbare Zustimmung und Widerruf
+    (DS-03/DS-04) — Einwilligung als Ereignisfolge, nicht als Statusspalte.
+  description: >
+    Eigener fachlicher Kontext `consent`, analog `nachweis`/`berechnung`.
+    Die Einwilligung ist ein EREIGNIS: Eine Zeile je (Person, Zweck,
+    Erteilung); der Widerruf setzt einen Zeitpunkt und löscht nichts; eine
+    erneute Einwilligung ist eine neue Zeile. Der Zustand („gilt gerade?")
+    ist die Ableitung daraus, nicht umgekehrt — nur so ist die Frage
+    beantwortbar, was am Stichtag X galt, und genau die stellt ein Nachweis
+    nach Art. 7 Abs. 1 DSGVO.
+  contact:
+    name: EDMS Studio
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Dev-Umgebung (Docker Compose, NestJS-Backend/BFF)
+
+tags:
+  - name: consent
+    description: Zweck-Katalog, Erklärungsfassungen, Einwilligungen und Widerrufe.
+
+security:
+  - oauth2: []
+
+paths:
+  /consent/zwecke:
+    get:
+      operationId: consentZweckeListe
+      tags: [consent]
+      summary: Zweck-Katalog auflisten
+      description: >
+        ABAC-Aktion `read:consent`, Rollen `betrieb`/`compliance-auditor`.
+
+        Geschlossene Liste. **Je Zweck eine eigene Einwilligung** — damit ist
+        das Kopplungsverbot (Art. 7 Abs. 4 DSGVO, DS-03) strukturell
+        eingehalten: Es gibt technisch keine Möglichkeit, mehrere Zwecke mit
+        einem Häkchen zu erteilen.
+
+        `verweigerbar` hält fest, ob die Verweigerung die Leistung kostet.
+        Es steuert nichts — es zwingt dazu, die Kopplungsfrage je Zweck
+        beantwortet zu halten.
+      responses:
+        '200':
+          description: Alle Zwecke, nach Code sortiert.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Zweck' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /consent/texte:
+    get:
+      operationId: consentTexteListe
+      tags: [consent]
+      summary: Erklärungsfassungen auflisten (DS-04)
+      description: >
+        ABAC-Aktion `read:consent`, Rollen `betrieb`/`compliance-auditor`.
+        Optional auf einen Zweck eingegrenzt; neueste Fassung zuerst.
+
+        Fassungen sind **unveränderlich** (`REVOKE UPDATE, DELETE` auf der
+        Tabelle). `wortlautSha256` macht eine dennoch erfolgte Textänderung
+        sichtbar — ohne ihn zeigten alle erteilten Einwilligungen
+        stillschweigend auf den neuen Wortlaut.
+      parameters:
+        - name: zweck
+          in: query
+          required: false
+          description: Zweck-Code, auf den eingegrenzt wird.
+          schema: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+      responses:
+        '200':
+          description: Erklärungsfassungen.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TextVersion' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: consentTextVeroeffentlichen
+      tags: [consent]
+      summary: Neue Erklärungsfassung veröffentlichen
+      description: >
+        ABAC-Aktion `create:consent_text`. Rolle `betrieb` — NICHT
+        `compliance-auditor` (DS-01, strikt lesend).
+
+        Schließt die bisher offene Fassung desselben Zwecks GENAU an diesem
+        Zeitpunkt: zwei Zeitscheiben ohne Lücke und ohne Überlappung. Zu
+        keinem Zeitpunkt gelten zwei Fassungen desselben Zwecks — sonst hinge
+        von der Zeilenreihenfolge ab, welcher Wortlaut einer Erteilung
+        zugrunde liegt.
+
+        Der SHA-256 wird **serverseitig** aus dem Wortlaut gebildet und nicht
+        entgegengenommen: Ein mitgelieferter Hash wäre eine Behauptung über
+        den Text statt einer Prüfung desselben.
+
+        Audit `einwilligung.consent.text_veroeffentlicht`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TextVersionVeroeffentlichen' }
+      responses:
+        '201':
+          description: Fassung veröffentlicht.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TextVersion' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /consent/einwilligungen:
+    get:
+      operationId: consentStandLesen
+      tags: [consent]
+      summary: Consent-Stand eines Subjekts über alle Zwecke
+      description: >
+        ABAC-Aktion `read:consent`, Rollen `betrieb`/`compliance-auditor` —
+        der Auditor MUSS den Stand sehen können, das ist Teil seiner Aufgabe
+        (Art. 7 Abs. 1: Nachweisbarkeit).
+
+        Enthält **auch Zwecke ohne Einwilligung** (`wirksameEinwilligung:
+        null`, leerer Verlauf). Nur so ist „hierzu wurde nie eingewilligt"
+        von „hierzu gibt es keinen Zweck" unterscheidbar — eine Liste, die
+        nur Erteiltes zeigt, beantwortet die Frage nach dem Nicht-Erteilten
+        nicht. Genau das verlangt eine Auskunft nach Art. 15 DSGVO.
+
+        Der `verlauf` führt auch widerrufene Einwilligungen: Sie sind der
+        Nachweis, dass die Verarbeitung rechtmäßig war, solange sie galten.
+
+        PII-frei: Kennungen, Codes, Zeitpunkte. IP und User-Agent stehen
+        feldverschlüsselt im Beleg und werden hier NICHT ausgegeben.
+      parameters:
+        - name: subjektTyp
+          in: query
+          required: true
+          description: >
+            Wer eingewilligt hat. Im Mietfall ist das der Anschlussnutzer,
+            nicht der Endkunde (DS-07) — eine Einwilligung, die jemand für
+            einen anderen erteilt, ist keine.
+          schema: { $ref: '#/components/schemas/SubjektTyp' }
+        - name: subjektId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Stand des Subjekts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjektConsentStand' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: consentEinwilligungErteilen
+      tags: [consent]
+      summary: Einwilligung erfassen (nicht digital — s. Beschreibung)
+      description: >
+        ABAC-Aktion `create:einwilligung`. Rolle `betrieb`.
+
+        **`erfassungsweg: digital_opt_in` wird mit 400 abgewiesen.** In der
+        Betriebssicht handelt nicht die betroffene Person, sondern ein
+        Mitarbeiter, der eine anderswo erteilte Einwilligung nachträgt. Die
+        einzige hier verfügbare IP ist seine — sie als IP der betroffenen
+        Person zu protokollieren wäre eine Fälschung des Nachweises. Zulässig
+        sind `vertrag_schriftlich` und `uebernahme_altbestand`.
+
+        Die zum Erteilungszeitpunkt gültige Erklärungsfassung wird
+        serverseitig ermittelt und festgeschrieben. Ist zu diesem Zweck keine
+        Fassung veröffentlicht, wird mit 400 abgewiesen — man kann nicht
+        einer Erklärung zustimmen, die es nicht gibt.
+
+        Fachzeile und Beleg entstehen in DERSELBEN Transaktion; der Beleg
+        wird mit dem Schlüssel der betroffenen Person verschlüsselt, damit
+        ein Krypto-Shred (ADR-0009) ihn erfasst.
+
+        `rechtsgrundlage` hat **keinen Vorgabewert** (DS-02): ADR-0012 O1 —
+        ob die Kernverarbeitung auf Einwilligung oder Vertragserfüllung
+        gestützt wird — ist eine offene Rechtsfrage.
+
+        Audit `einwilligung.consent.erteilt` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EinwilligungErteilen' }
+      responses:
+        '201':
+          description: Einwilligung erfasst.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Einwilligung' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /consent/einwilligungen/{einwilligungId}/widerruf:
+    parameters:
+      - name: einwilligungId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: consentEinwilligungWiderrufen
+      tags: [consent]
+      summary: Einwilligung widerrufen (Art. 7 Abs. 3 DSGVO)
+      description: >
+        ABAC-Aktion `widerrufen:einwilligung`. Rolle `betrieb`.
+
+        Beendet die Wirkung AB diesem Zeitpunkt und **löscht nichts**. Die
+        bis dahin erfolgte Verarbeitung bleibt rechtmäßig (Art. 7 Abs. 3
+        S. 2) — Fachzeile und Beleg bleiben stehen, sonst wäre auch der
+        Nachweis der rechtmäßigen Vergangenheit vernichtet.
+
+        `POST .../widerruf` statt `DELETE`, weil nichts verschwindet.
+
+        Ein zweiter Widerruf antwortet **409** und überschreibt den
+        ursprünglichen Zeitpunkt NICHT: Sonst verschöbe sich die Aussage,
+        ab wann die Verarbeitung ohne Grundlage lief.
+
+        Wer nach einem Widerruf erneut einwilligt, erzeugt eine NEUE
+        Einwilligung mit der dann gültigen Fassung.
+
+        Audit `einwilligung.consent.widerrufen` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EinwilligungWiderrufen' }
+      responses:
+        '200':
+          description: Widerrufen; ausgegeben wird die Einwilligung mit gesetztem `widerrufenAt`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Einwilligung' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /consent/widersprueche:
+    get:
+      operationId: consentWiderspruecheLesen
+      tags: [consent]
+      summary: Widersprüche einer Person
+      description: >
+        ABAC-Aktion `read:consent`. Rollen `betrieb` und `compliance-auditor`.
+
+        Getrennt vom Consent-Stand und bewusst nicht in ihn eingebettet: Ein
+        Widerspruch ist kein Zustand einer Einwilligung, sondern eine eigene
+        Erklärung zu einer Verarbeitung, die es auch **ohne** Zustimmung gibt.
+        Wer beides in eine Liste legt, lädt dazu ein, sie zu verwechseln.
+
+        Vollständiger Verlauf, neueste zuerst — auch zurückgenommene. Der
+        Zeitraum, in dem widersprochen war, entscheidet, ob eine Verarbeitung
+        in dieser Zeit zulässig war.
+      parameters:
+        - name: subjektTyp
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/SubjektTyp' }
+        - name: subjektId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Verlauf der Widersprüche.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Widerspruch' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: consentWiderspruchErklaeren
+      tags: [consent]
+      summary: Widerspruch bzw. Abwahl erfassen (AW-27)
+      description: >
+        ABAC-Aktion `create:widerspruch`. Rolle `betrieb`.
+
+        Das Gegenstück zur Einwilligung — für die andere Hälfte der
+        Rechtsgrundlagen-Matrix. Wo eine Verarbeitung `opt_out` oder
+        `vertraglich` läuft, gibt es nichts zu widerrufen; dort erklärt die
+        betroffene Person einen Widerspruch bzw. wählt die Leistung ab.
+
+        Gegen einen **Opt-in**-Zweck ist das nicht möglich (**400**) — dagegen
+        widerruft man die Einwilligung (Art. 7 Abs. 3). Die Datenbank hält
+        dieselbe Grenze über einen zusammengesetzten Fremdschlüssel auf die
+        Matrix.
+
+        `erlaubnismodus` steht NICHT im Body: Er wird serverseitig aus
+        `consent.zweck_subjekt` bestimmt. Ob eine Verarbeitung geschuldet ist
+        oder auf einer Einwilligung beruht, entscheidet nicht, wer das
+        Formular ausfüllt.
+
+        Für `zweckCode = wiss_auswertung` setzt der Vorgang zugleich das
+        DE-04-Ausnahme-Attribut am Subjekt. Die Durchsetzungsstelle bleibt das
+        Attribut — aber es folgt ab jetzt der Erklärung und wird **nicht mehr
+        von Hand gesetzt**; der entsprechende Weg über die Stammdaten-API
+        antwortet seit AW-27 mit 400.
+
+        Ein zweiter wirksamer Widerspruch zum selben Zweck antwortet **409**.
+
+        Audit `widerspruch.consent.erklaert` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WiderspruchErklaeren' }
+      responses:
+        '201':
+          description: Erfasst.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Widerspruch' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /consent/widersprueche/{widerspruchId}/ruecknahme:
+    parameters:
+      - name: widerspruchId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: consentWiderspruchZuruecknehmen
+      tags: [consent]
+      summary: Widerspruch zurücknehmen
+      description: >
+        ABAC-Aktion `zuruecknehmen:widerspruch`. Rolle `betrieb`.
+
+        Eigener Vorgang mit eigenem Zeitpunkt und eigenem Beleg — nicht das
+        Löschen des ersten. `POST .../ruecknahme` statt `DELETE`, weil nichts
+        verschwindet: Würde die Erklärung gelöscht, verschwände auch der
+        Nachweis über den Zeitraum, in dem widersprochen war.
+
+        Die Rücknahme lässt eine Verarbeitung **wieder anlaufen** und setzt
+        bei `wiss_auswertung` ein Bestandsmerkmal zurück. Sie ist deshalb
+        ebenso protokollpflichtig wie die Erklärung — von beiden Richtungen
+        ist die zurücknehmende die gefährlichere.
+
+        Eine zweite Rücknahme antwortet **409** und überschreibt den
+        ursprünglichen Zeitpunkt NICHT.
+
+        Audit `widerspruch.consent.zurueckgenommen` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WiderspruchZuruecknehmen' }
+      responses:
+        '200':
+          description: Zurückgenommen; ausgegeben wird der Widerspruch mit gesetztem `zurueckgenommenAt`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Widerspruch' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        OIDC via Keycloak (ADR-0002, Realm `edms`). Bearer-Access-Token,
+        serverseitig gegen die Keycloak-JWKS validiert (JwtAuthGuard). AuthZ
+        (RBAC @Roles + ABAC-PDP) im PolicyInterceptor; Default = deny.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.local/realms/edms/protocol/openid-connect/auth
+          tokenUrl: https://auth.example.local/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-erzeugter Idempotenz-Schlüssel (UUID empfohlen). Präsenz/Format geprüft.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe (Validierung fehlgeschlagen). PII-frei.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Kein/ungültiges/abgelaufenes Access-Token (AuthN, JwtAuthGuard).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: AuthZ-Ablehnung (RBAC/ABAC, PolicyInterceptor). PII-frei, strukturierter Grund.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NichtGefunden:
+      description: Einwilligung oder Person nicht gefunden.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Konflikt:
+      description: >
+        Bereits wirksame Einwilligung zu diesem Zweck, bereits vergebene
+        Fassungsnummer, oder ein zweiter Widerruf.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unerwartet:
+      description: Unerwarteter Fehler. PII-/stacktrace-frei (DS-10).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: Fehlerobjekt nach RFC 9457 (application/problem+json).
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri, default: 'about:blank' }
+        title: { type: string }
+        status: { type: integer, minimum: 100, maximum: 599 }
+        detail:
+          type: string
+          description: Menschenlesbare, PII-freie Detailbeschreibung.
+        instance: { type: string, format: uri }
+
+    SubjektTyp:
+      type: string
+      enum: [endkunde, anschlussnutzer]
+      description: >
+        Wer einwilligt. Es ist immer die BETROFFENE Person — im Mietfall der
+        Anschlussnutzer, nicht der Endkunde (DS-07).
+
+    Rechtsgrundlage:
+      type: string
+      enum: [einwilligung_art6_1a, vertrag_art6_1b]
+      description: >
+        KEIN Vorgabewert (DS-02). ADR-0012 O1 ist offen: Ob die
+        Kernverarbeitung auf Einwilligung (Art. 6 Abs. 1 lit. a) oder auf
+        Vertragserfüllung (lit. b) gestützt wird, ist eine Rechtsfrage mit
+        erheblicher Folge — eine widerrufbare Einwilligung als Grundlage der
+        Kernverarbeitung ist etwas anderes als ein Vertrag.
+
+    Erfassungsweg:
+      type: string
+      enum: [digital_opt_in, vertrag_schriftlich, uebernahme_altbestand]
+      description: >
+        `digital_opt_in` ist über DIESE API nicht erfassbar (400) — s.
+        `POST /consent/einwilligungen`. Der Wert existiert für das spätere
+        Nutzerportal, in dem die betroffene Person selbst handelt.
+
+    Zweck:
+      type: object
+      additionalProperties: false
+      required: [code, bezeichnung, beschreibung]
+      properties:
+        code: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        bezeichnung: { type: string }
+        beschreibung: { type: string }
+
+    Erlaubnismodus:
+      type: string
+      enum: [opt_in, opt_out, vertraglich]
+      description: >
+        Wie die Erlaubnis zustande kommt (A12-6). `opt_in` = es braucht eine
+        ausdrückliche Erklärung; `opt_out` = die Leistung läuft, bis
+        widersprochen wird (TB-06); `vertraglich` = geschuldet, es gibt
+        nichts zu erklären und nichts zu widerrufen. Ein Widerspruch nach
+        Art. 21 ist etwas anderes als ein Widerruf nach Art. 7 Abs. 3.
+
+    TextVersion:
+      type: object
+      additionalProperties: false
+      required: [id, zweckCode, fassung, wortlaut, wortlautSha256, gueltigAb, gueltigBis]
+      properties:
+        id: { type: string, format: uuid }
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        fassung: { type: string, pattern: '^[0-9]+\.[0-9]+$' }
+        wortlaut: { type: string }
+        wortlautSha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          description: SHA-256 des Wortlauts (hex). Macht eine nachträgliche Textänderung sichtbar.
+        gueltigAb: { type: string, format: date-time }
+        gueltigBis:
+          type: [string, 'null']
+          format: date-time
+          description: '`null` = derzeit gültige Fassung.'
+
+    TextVersionVeroeffentlichen:
+      type: object
+      additionalProperties: false
+      required: [zweckCode, fassung, wortlaut]
+      properties:
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        fassung: { type: string, pattern: '^[0-9]+\.[0-9]+$' }
+        wortlaut:
+          type: string
+          minLength: 20
+          maxLength: 100000
+          description: >
+            Der rechtsverbindliche Wortlaut mit den Angaben nach Art. 13
+            DSGVO. Die Mindestlänge fängt das leere Feld ab und MASST SICH
+            NICHT AN, die Vollständigkeit dieser Angaben zu prüfen — das ist
+            eine juristische Beurteilung, keine Zeichenzählung.
+
+    Einwilligung:
+      type: object
+      additionalProperties: false
+      required:
+        [id, subjektTyp, subjektId, zweckCode, textVersionId, fassung,
+         rechtsgrundlage, erfassungsweg, quelleRef, widerrufErfassungsweg,
+         widerrufQuelleRef, erteiltAt, widerrufenAt, wirksam]
+      properties:
+        id: { type: string, format: uuid }
+        subjektTyp: { $ref: '#/components/schemas/SubjektTyp' }
+        subjektId: { type: string, format: uuid }
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        textVersionId: { type: string, format: uuid }
+        fassung: { type: string, pattern: '^[0-9]+\.[0-9]+$' }
+        rechtsgrundlage: { $ref: '#/components/schemas/Rechtsgrundlage' }
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        quelleRef:
+          type: [string, 'null']
+          description: >
+            Fundstelle des zugrundeliegenden Dokuments (A12-28). `null` nur
+            beim digitalen Weg, wo es kein Dokument gibt.
+        widerrufErfassungsweg:
+          oneOf:
+            - $ref: '#/components/schemas/Erfassungsweg'
+            - type: 'null'
+          description: 'Auf welchem Weg der Widerruf erklärt wurde; `null`, solange nicht widerrufen.'
+        widerrufQuelleRef:
+          type: [string, 'null']
+          description: 'Fundstelle des Widerrufsschreibens; `null`, solange nicht widerrufen.'
+        erteiltAt:
+          type: string
+          format: date-time
+          description: >
+            Zeitpunkt der **Erklärung** durch die betroffene Person — NICHT der
+            Zeitpunkt der Erfassung (A12-27). Bei nachgetragenen Vorgängen
+            liegen beide Wochen auseinander.
+        widerrufenAt:
+          type: [string, 'null']
+          format: date-time
+          description: >
+            Zeitpunkt, zu dem der Widerruf **erklärt** wurde. `null` = wirksam.
+        wirksam:
+          type: boolean
+          description: >
+            Abgeleitet aus `widerrufenAt === null`. Der Zustand folgt aus dem
+            Ereignis, nicht umgekehrt — es gibt keine getrennt gepflegte
+            zweite Wahrheit.
+
+    Widerspruch:
+      type: object
+      additionalProperties: false
+      required: [id, subjektTyp, subjektId, zweckCode, erlaubnismodus, erklaertAt, erfassungsweg, quelleRef, zurueckgenommenAt, ruecknahmeErfassungsweg, ruecknahmeQuelleRef, wirksam]
+      description: >
+        Eine Erklärung gegen eine Verarbeitung, die ohne Einwilligung läuft.
+        PII-frei: Kennungen, Codes, Zeitpunkte. `quelleRef` ist eine
+        Ordnungsnummer, kein Personendatum.
+      properties:
+        id: { type: string, format: uuid }
+        subjektTyp: { $ref: '#/components/schemas/SubjektTyp' }
+        subjektId: { type: string, format: uuid }
+        zweckCode: { type: string }
+        erlaubnismodus:
+          type: string
+          enum: [opt_out, vertraglich]
+          description: Aus der Matrix bestimmt. `opt_in` ist ausgeschlossen — dagegen widerruft man.
+        erklaertAt:
+          type: string
+          format: date-time
+          description: Zeitpunkt der ERKLÄRUNG, nicht der Erfassung. Er sagt, ab wann nicht mehr verarbeitet werden durfte.
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        quelleRef: { type: [string, 'null'] }
+        zurueckgenommenAt: { type: [string, 'null'], format: date-time }
+        ruecknahmeErfassungsweg:
+          oneOf:
+            - $ref: '#/components/schemas/Erfassungsweg'
+            - type: 'null'
+        ruecknahmeQuelleRef: { type: [string, 'null'] }
+        wirksam:
+          type: boolean
+          description: Abgeleitet aus `zurueckgenommenAt === null` — der Zustand folgt dem Ereignis, nicht umgekehrt.
+
+    WiderspruchErklaeren:
+      type: object
+      additionalProperties: false
+      required: [subjektTyp, subjektId, zweckCode, erklaertAt, erfassungsweg, quelleRef]
+      properties:
+        subjektTyp: { $ref: '#/components/schemas/SubjektTyp' }
+        subjektId: { type: string, format: uuid }
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        erklaertAt: { type: string, format: date-time }
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        quelleRef: { type: string, minLength: 1, maxLength: 200 }
+
+    WiderspruchZuruecknehmen:
+      type: object
+      additionalProperties: false
+      required: [zurueckgenommenAt, erfassungsweg, quelleRef]
+      properties:
+        zurueckgenommenAt: { type: string, format: date-time }
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        quelleRef: { type: string, minLength: 1, maxLength: 200 }
+
+    EinwilligungErteilen:
+      type: object
+      additionalProperties: false
+      required: [subjektTyp, subjektId, zweckCode, erfassungsweg, erteiltAt, quelleRef]
+      description: >
+        **Ohne `rechtsgrundlage`** (A12-1). Sie wird serverseitig aus der
+        Matrix `consent.zweck_subjekt` bestimmt — eine Rechtsgrundlage, die
+        ein Sachbearbeiter aus einem Dropdown wählt, ist von der falschen
+        Stelle gewählt. Beruht der Zweck für diese Subjektart nicht auf einer
+        Einwilligung (`vertraglich`/`opt_out`), antwortet die Route `400` und
+        nennt den Grund.
+      properties:
+        subjektTyp: { $ref: '#/components/schemas/SubjektTyp' }
+        subjektId: { type: string, format: uuid }
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        erteiltAt:
+          type: string
+          format: date-time
+          description: >
+            Zeitpunkt der **Erklärung**, Pflichtfeld (A12-27). Der Regelfall
+            dieser API ist das Nachtragen: Eine auf Papier erteilte
+            Einwilligung wird Tage oder Wochen später erfasst. Setzte der
+            Server hier den Erfassungszeitpunkt ein, wiese der Nachweis
+            systematisch den falschen Tag aus. Zukunftswerte: 400.
+        quelleRef:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: >
+            Fundstelle des zugrundeliegenden Dokuments (A12-28). Ohne sie
+            bedeutet `erfassungsweg: vertrag_schriftlich` nicht „es gibt eine
+            unterschriebene Erklärung", sondern nur „jemand hat einen
+            Listeneintrag gewählt". Ordnungsnummer, KEIN Personendatum.
+
+    EinwilligungWiderrufen:
+      type: object
+      additionalProperties: false
+      required: [widerrufenAt, erfassungsweg, quelleRef]
+      description: >
+        Der Widerruf war bis V0046 ein Aufruf ohne Rumpf — kein Kanal, keine
+        Fundstelle, kein Erklärungszeitpunkt. Damit war die Erteilung dreifach
+        belegt und der Widerruf einfach; Art. 7 Abs. 3 S. 4 verlangt, dass der
+        Widerruf so einfach sein muss wie die Erteilung, dann muss er auch so
+        belegt sein (A12-29).
+      properties:
+        widerrufenAt:
+          type: string
+          format: date-time
+          description: >
+            Zeitpunkt, zu dem der Widerruf **erklärt** wurde. Hier wiegt der
+            Unterschied schwerer als bei der Erteilung: Ein am 1. brieflich
+            erklärter, am 20. erfasster Widerruf ließe sonst neunzehn Tage
+            rechtswidriger Verarbeitung rechtmäßig aussehen.
+        erfassungsweg: { $ref: '#/components/schemas/Erfassungsweg' }
+        quelleRef: { type: string, minLength: 1, maxLength: 200 }
+
+    SubjektZweckStand:
+      type: object
+      additionalProperties: false
+      required:
+        [zweckCode, bezeichnung, verweigerbar, rechtsgrundlage, erlaubnismodus,
+         begruendung, wirksameEinwilligung, verlauf]
+      properties:
+        zweckCode: { type: string, pattern: '^[a-z][a-z0-9_]{2,63}$' }
+        bezeichnung: { type: string }
+        verweigerbar:
+          type: boolean
+          description: >
+            Ob die Verweigerung die Leistung kostet (Art. 7 Abs. 4 DSGVO).
+            Steht am Paar (Zweck, Subjektart), nicht am Zweck allein: Die
+            Verbrauchsmessung ist für den Endkunden nicht verweigerbar
+            (Vertragsgegenstand) und für den Anschlussnutzer sehr wohl.
+        rechtsgrundlage: { $ref: '#/components/schemas/Rechtsgrundlage' }
+        erlaubnismodus: { $ref: '#/components/schemas/Erlaubnismodus' }
+        begruendung:
+          type: string
+          description: >
+            Warum genau diese Grundlage gilt. Wird dem Bediener angezeigt —
+            eine Matrix, die Eingaben ablehnt, ohne den Grund zu nennen, wäre
+            eine Blackbox.
+        wirksameEinwilligung:
+          oneOf:
+            - $ref: '#/components/schemas/Einwilligung'
+            - type: 'null'
+          description: '`null` = zu diesem Zweck besteht derzeit keine Einwilligung.'
+        verlauf:
+          type: array
+          description: >
+            Vollständiger Verlauf, neueste zuerst — einschließlich
+            widerrufener Einwilligungen. Sie sind der Nachweis, dass die
+            Verarbeitung rechtmäßig war, solange sie galten.
+          items: { $ref: '#/components/schemas/Einwilligung' }
+
+    SubjektConsentStand:
+      type: object
+      additionalProperties: false
+      required: [subjektTyp, subjektId, zwecke]
+      properties:
+        subjektTyp: { $ref: '#/components/schemas/SubjektTyp' }
+        subjektId: { type: string, format: uuid }
+        zwecke:
+          type: array
+          description: >
+            EIN Eintrag je Zweck des Katalogs — auch für Zwecke ohne
+            Einwilligung. Nur so ist „nie eingewilligt" von „Zweck existiert
+            nicht" unterscheidbar.
+          items: { $ref: '#/components/schemas/SubjektZweckStand' }

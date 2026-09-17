@@ -1,0 +1,22 @@
+-- V0027__analytics_berechnungslauf_einflussgroesse_snapshot.down.sql
+--
+-- Rollt die additive Spalte `analytics.berechnungslauf.
+-- einflussgroesse_snapshot_id` (inkl. ihres impliziten FK-Constraints und
+-- ihres Kommentars) vollständig zurück. Analog V0005-Down-Datei: additive
+-- Spalte auf einer bestehenden Tabelle — `.claude/rules/database-
+-- migrations.md` verlangt hier KEINEN Backup-/Freigabe-Nachweis (die Regel
+-- gilt für `DROP TABLE` auf Produktiv-Tabellen, nicht für `DROP COLUMN`
+-- einer additiven Spalte). `analytics.berechnungslauf` selbst bleibt
+-- vollständig erhalten (alle anderen Spalten/Zeilen/FKs/Trigger
+-- unangetastet). Einziger Datenverlust: bereits gesetzte
+-- `einflussgroesse_snapshot_id`-Werte — auf einer Dev-/Test-Instanz
+-- unkritisch (identisches Argument zum V0005-Down-Präzedenzfall).
+--
+-- `DROP COLUMN` entfernt automatisch den davon abhängigen FK-Constraint
+-- (REFERENCES analytics.eingang_snapshot(id)) sowie den Spalten-Kommentar
+-- mit — kein separates `DROP CONSTRAINT` nötig (identisches
+-- Postgres-Verhalten wie beim CHECK-Constraint in der V0005-Down-Datei).
+-- Kein Index war für diese Spalte angelegt (s. Up-Datei-Kopf), also auch
+-- nichts Zusätzliches abzuräumen.
+
+ALTER TABLE analytics.berechnungslauf DROP COLUMN einflussgroesse_snapshot_id;

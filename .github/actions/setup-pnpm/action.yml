@@ -1,0 +1,73 @@
+name: "Setup pnpm (corepack, .nvmrc) + Store-Cache"
+description: >-
+  Richtet Node.js gemäß .nvmrc ein, aktiviert pnpm via corepack (Version aus
+  der Wurzel-package.json "packageManager", ADR-0001-projekt-skelett.md
+  §10.1) und cached den pnpm-Content-Addressed-Store branch-gescoped, um
+  Cross-Branch-/Fork-Kontamination zu verhindern (ADR §10.3,
+  devops-lead-Votum "Cache-Trust-Boundary"). Führt optional
+  "pnpm install --frozen-lockfile" aus.
+
+inputs:
+  install:
+    description: >-
+      "true" (Default): führt "pnpm install --frozen-lockfile" (voller
+      Dev+Prod-Baum) aus. "false": richtet nur Node/pnpm/Cache ein — der
+      Aufrufer führt danach einen eigenen Install-Schritt aus (z. B.
+      "pnpm install --prod --frozen-lockfile" für license-gate/sbom).
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Node.js gemäß .nvmrc einrichten
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version-file: ".nvmrc"
+
+    - name: corepack aktualisieren + aktivieren
+      shell: bash
+      # Das mit Node 20 gebündelte corepack trägt veraltete npm-Registry-
+      # Signaturschlüssel ("Cannot find matching keyid", erster CI-Lauf
+      # 2026-07-09). Fix zweigleisig: (a) corepack auf gepinnte, aktuelle
+      # Version heben; (b) packageManager-Feld trägt jetzt den
+      # +sha512-Integritäts-Hash, sodass die Tarball-Prüfung hash-basiert
+      # statt signatur-basiert erfolgt. COREPACK_DEFAULT_TO_LATEST=0
+      # verhindert zusätzlich jede "latest"-Auflösung gegen die Registry.
+      run: |
+        npm install -g corepack@0.34.0
+        corepack enable
+        echo "COREPACK_DEFAULT_TO_LATEST=0" >> "${GITHUB_ENV}"
+
+    - name: pnpm-Store-Pfad ermitteln
+      # Hinweis: corepack lädt die in package.json "packageManager" gepinnte
+      # pnpm-Version transparent beim ersten "pnpm"-Aufruf nach.
+      id: pnpm-store
+      shell: bash
+      run: |
+        store_path="$(pnpm store path --silent)"
+        if [ -z "${store_path}" ]; then
+          echo "::error::pnpm store path lieferte keinen Pfad — pnpm-Aktivierung via corepack fehlgeschlagen." >&2
+          exit 1
+        fi
+        echo "path=${store_path}" >> "${GITHUB_OUTPUT}"
+
+    - name: pnpm-Store cachen (branch-gescoped)
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        # Primärer Key ist branch-/PR-gescoped (github.ref_name), damit ein
+        # Lauf auf einem (Fork-)Branch niemals den Cache-Eintrag eines
+        # anderen Branches überschreiben kann. Die restore-keys-Kette
+        # erlaubt trotzdem ein schnelles Warm-Start-Restore (Lesezugriff)
+        # von einem verwandten Branch bzw. vom Default-Branch aus.
+        key: pnpm-store-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml', 'pnpm-workspace.yaml') }}
+        restore-keys: |
+          pnpm-store-${{ runner.os }}-${{ github.ref_name }}-
+          pnpm-store-${{ runner.os }}-${{ github.event.repository.default_branch }}-
+          pnpm-store-${{ runner.os }}-
+
+    - name: pnpm install --frozen-lockfile
+      if: ${{ inputs.install == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile

@@ -1,0 +1,25 @@
+-- V0005__energy_system_status.down.sql
+--
+-- Rollt die additive Spalte `energy.system.status` (inkl. ihres
+-- CHECK-Constraints `ck_system_status` und ihres Kommentars) vollständig
+-- zurück. `DROP COLUMN` ist hier unkritisch (kein Backup-/Freigabe-Nachweis
+-- nach `.claude/rules/database-migrations.md` "Keine DROP TABLE auf
+-- produktive Tabellen ... ohne ... Nachweis" nötig):
+--   (a) betrifft eine additive Spalte aus V0005, NICHT die Tabelle selbst
+--       (`energy.system` bleibt vollständig erhalten, inkl. aller anderen
+--       Spalten/Zeilen/Fremdschlüssel);
+--   (b) `DROP COLUMN status` entfernt automatisch den davon abhängigen
+--       CHECK-Constraint `ck_system_status` mit (kein separates `DROP
+--       CONSTRAINT` nötig) sowie den Spalten-Kommentar (Kommentare sind an
+--       die Spalte gebunden, nicht separat zu entfernen);
+--   (c) einziger Datenverlust ist der `status`-Wert selbst (bei Rollback auf
+--       einer Instanz, auf der zwischenzeitlich echte/synthetische
+--       `stillgelegt`-Zustände gesetzt wurden, gehen GENAU diese Werte
+--       verloren -- nicht die Zeilen/Systeme selbst). Auf einer
+--       Dev-/Test-Instanz unkritisch; vor einem Rollback auf einer Instanz
+--       mit echten Betriebsdaten ist trotzdem eine bewusste Prüfung
+--       sinnvoll (Re-Anlage der Spalte nach erneutem `up` setzt alle Zeilen
+--       wieder auf den Default `aktiv` zurück, unabhängig vom vorherigen
+--       Zustand).
+
+ALTER TABLE energy.system DROP COLUMN status;

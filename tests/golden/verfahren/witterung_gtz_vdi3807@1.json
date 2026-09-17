@@ -1,0 +1,53 @@
+{
+  "verfahren": "witterung_gtz_vdi3807",
+  "version": 1,
+  "quelle": "ADR-0006 B12.6 — kanonische Golden Vectors. Spiegel in analytics.verfahren_version.golden_vectors (V0019-Seed); Synchronhaltung ist Prozessdisziplin (ADR-0006 D-GV). Der Laufzeit-Bootstrap-Check rechnet diese Vektoren mit dem Kern (domain/witterung-gtz.ts) nach und bricht bei Abweichung fail-closed ab.",
+  "parameter_defaults": {
+    "t_innen_c": 20,
+    "t_heizgrenze_c": 15,
+    "tage_pro_jahr": 365.25
+  },
+  "toleranz_kwh": 0.001,
+  "vektoren": [
+    {
+      "vektor": "V1",
+      "beschreibung": "Gemischte Aufteilung Grundlast/Witterung (g=0,20), Gas.",
+      "g": 0.2,
+      "d_m": 31,
+      "monat": "2027-01",
+      "b_a_kwh": 20000,
+      "gtz_base_kd": 3500,
+      "gtz_m_ist_kd": 400,
+      "energietraeger": "gas",
+      "erwartet_r_m_kwh": 2168.065,
+      "zusatz": {
+        "gtz_norm_kd": 3400,
+        "erwartet_b_norm_kwh": 19542.857
+      }
+    },
+    {
+      "vektor": "V2",
+      "beschreibung": "Grenzfall reiner Grundlast-Verbraucher (g=1,00): Witterungsterm entfällt, GTZ_base darf fehlen (Strom).",
+      "g": 1.0,
+      "d_m": 31,
+      "monat": "2027-07",
+      "b_a_kwh": 3000,
+      "gtz_base_kd": null,
+      "gtz_m_ist_kd": 0,
+      "energietraeger": "strom",
+      "erwartet_r_m_kwh": 254.62
+    },
+    {
+      "vektor": "V3",
+      "beschreibung": "Grenzfall GTZ_m=0 (Sommermonat, kein Heizbedarf): nur der Grundlast-Term bleibt (Gas).",
+      "g": 0.2,
+      "d_m": 31,
+      "monat": "2027-08",
+      "b_a_kwh": 20000,
+      "gtz_base_kd": 3500,
+      "gtz_m_ist_kd": 0,
+      "energietraeger": "gas",
+      "erwartet_r_m_kwh": 339.493
+    }
+  ]
+}

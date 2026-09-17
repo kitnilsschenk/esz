@@ -1,0 +1,506 @@
+name: CI
+
+# ADR-0001-projekt-skelett.md, Abschnitt 10.3 (CI-Design) + Abschnitt 13
+# (Lead-Reviews, eingearbeitet). PR- und Push-Pipeline; alle Jobs sind
+# Pflicht-Gates (compliance-director-Auflage 5, ADR §6.1) und daher
+# blockierend. KEIN "pull_request_target" (Fork-Code + Secrets, ADR §10.3).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Lizenz-Whitelist (.claude/rules/dependencies.md). Zwei Formen: Semikolon
+  # für license-checker --onlyAllow, Regex fürs Bundle-Lizenz-Manifest
+  # (License-Gate Stufe 2).
+  EDMS_LICENSE_ALLOWLIST_SEMI: "MIT;ISC;BSD-2-Clause;BSD-3-Clause;0BSD;Apache-2.0;Apache 2.0;MPL-2.0;PostgreSQL;Zlib;Unlicense;CC0-1.0;BlueOak-1.0.0"
+  EDMS_LICENSE_ALLOWLIST_REGEX: '^(MIT|ISC|BSD-2-Clause|BSD-3-Clause|0BSD|Apache-2\.0|MPL-2\.0|PostgreSQL|Zlib|Unlicense|CC0-1\.0|BlueOak-1\.0\.0)$'
+
+jobs:
+  # --- 1: lint --------------------------------------------------------------
+  lint:
+    name: Lint (ESLint + Prettier)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: pnpm run lint
+        run: pnpm run lint
+
+  # --- 2: typecheck -----------------------------------------------------------
+  typecheck:
+    name: Typecheck (tsc --noEmit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: pnpm run typecheck
+        run: pnpm run typecheck
+
+  # --- 3: unit ----------------------------------------------------------------
+  unit:
+    name: Unit-Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: pnpm run test
+        run: pnpm run test
+
+  # --- 4: build (Artefakte für license-gate + sbom) ---------------------------
+  build:
+    name: Build (Backend + Frontend + Shared)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: pnpm run build
+        run: pnpm run build
+      - name: Build-Artefakte hochladen
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-output
+          path: |
+            src/backend/dist
+            src/frontend/dist
+            src/shared/dist
+          if-no-files-found: warn
+          retention-days: 7
+
+  # --- 5: license-gate (zweistufig, ADR §10.3) --------------------------------
+  license-gate:
+    name: License-Gate (Stufe 1+2)
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm (ohne Install -- eigener --prod-Install unten)
+        uses: ./.github/actions/setup-pnpm
+        with:
+          install: "false"
+      - name: Build-Artefakte laden (für Stufe 2)
+        # Hinweis: upload-artifact bestimmt bei mehreren path-Einträgen die
+        # "least common ancestor" (hier: "src") als Artefakt-Wurzel und
+        # entfernt dieses Präfix beim Upload. Beim Download deshalb bewusst
+        # nach "src" (nicht ".") entpacken, damit z. B.
+        # src/frontend/dist/oss-licenses.json wieder am erwarteten Pfad
+        # landet.
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: build-output
+          path: src
+
+      - name: "pnpm install --prod --frozen-lockfile (Production-Baum, ADR §10.3 devops-Votum 2)"
+        run: pnpm install --prod --frozen-lockfile
+
+      - name: "License-Gate: Selbsttest der SPDX-Auswertung"
+        # Ein Fehler in der Ausdrucks-Auswertung macht das Gate nicht rot,
+        # sondern gruen — und ein gruenes Gate prueft niemand nach.
+        run: node tools/ci/lizenz-gate.mjs --selbsttest
+
+      - name: "License-Gate Stufe 1: Production-Abhängigkeitsbaum (tools/ci/lizenz-gate.mjs)"
+        # Vorher: license-checker@25.0.1 je Workspace-Paket. Das Werkzeug folgt
+        # dem pnpm-Symlink-Store nicht und sah deshalb 15 statt 231 Pakete —
+        # das Gate war gruen, weil es fast nichts prueft. Dabei sind vier
+        # BlueOak-1.0.0-Pakete (typeorm -> glob) unbemerkt in den
+        # Produktionsbaum gelangt. Ersetzt durch `pnpm licenses list`, das den
+        # Store kennt, ueber alle Workspace-Pakete zugleich laeuft und
+        # zusammengesetzte SPDX-Ausdruecke auswertet statt sie als Zeichenkette
+        # zu vergleichen.
+        run: node tools/ci/lizenz-gate.mjs
+
+      - name: "License-Gate Stufe 2: Bundle-Lizenz-Manifest (Frontend, rollup-plugin-license)"
+        run: |
+          set -euo pipefail
+          MANIFEST="src/frontend/dist/oss-licenses.json"
+
+          # TODO(AP5, frontend-lead): Der Vite-Frontend-Build erzeugt aktuell
+          # noch KEIN Bundle-Lizenz-Manifest (Walking Skeleton, ADR-0001
+          # §10.7 / §13.1(2) -- Client-Generator/Vite-Build kommt erst mit
+          # AP5). Erwarteter Konsum-Vertrag: rollup-plugin-license mit
+          # `output.thirdParty.output = "dist/oss-licenses.json"`, JSON-Array
+          # von Objekten mit einem "license"-Feld je gebündeltem Modul. Sobald
+          # diese Datei existiert, konsumiert dieser Schritt sie automatisch
+          # und wird blockierend (M3, ADR §10.3 Stufe 2). Bis dahin: Stufe 2
+          # übersprungen, NICHT rot -- Stufe 1 bleibt in jedem Fall
+          # blockierend.
+          if [[ ! -f "${MANIFEST}" ]]; then
+            echo "TODO(AP5): '${MANIFEST}' existiert noch nicht -- Stufe 2 wird übersprungen (siehe Kommentar im Workflow-Schritt)."
+            exit 0
+          fi
+
+          echo "==> Prüfe Bundle-Lizenz-Manifest ${MANIFEST} gegen Whitelist ..."
+          fail=0
+          while IFS= read -r lic; do
+            if [[ -z "${lic}" || "${lic}" == "null" ]]; then
+              echo "FEHLER: Modul ohne Lizenzangabe im Bundle-Manifest." >&2
+              fail=1
+              continue
+            fi
+            if ! [[ "${lic}" =~ ${EDMS_LICENSE_ALLOWLIST_REGEX} ]]; then
+              echo "FEHLER: Nicht-Whitelist-Lizenz im Bundle: ${lic}" >&2
+              fail=1
+            fi
+          done < <(jq -r '(.dependencies // .thirdParty // .) | (if type == "array" then . else [] end) | .[] | (.license // .licenseName // "UNKNOWN")' "${MANIFEST}")
+
+          if [[ "${fail}" -ne 0 ]]; then
+            echo "==> License-Gate Stufe 2 FEHLGESCHLAGEN." >&2
+            exit 1
+          fi
+          echo "==> License-Gate Stufe 2 OK."
+
+  # --- 6: sbom (CycloneDX via cdxgen, restricted mode) ------------------------
+  sbom:
+    name: SBOM (CycloneDX/cdxgen)
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm (ohne Install -- eigener --prod-Install unten)
+        uses: ./.github/actions/setup-pnpm
+        with:
+          install: "false"
+
+      - name: "pnpm install --prod --frozen-lockfile (Runtime-Coverage, M4)"
+        run: pnpm install --prod --frozen-lockfile
+
+      - name: "SBOM erzeugen (cdxgen@12.7.1, restricted mode --type npm)"
+        run: |
+          set -euo pipefail
+          pnpm dlx @cyclonedx/cdxgen@12.7.1 \
+            --type npm \
+            --no-install-deps \
+            --spec-version 1.6 \
+            --fail-on-error \
+            --author "EDMS Studio" \
+            --output bom.json \
+            .
+          # --validate ist cdxgen-Default (Schema-Validierung, M4) und bleibt
+          # aktiv; --no-install-deps verhindert eigenständige
+          # Installs/Netzzugriffe von cdxgen zur Laufzeit (devops-Votum 3,
+          # deterministisch, kein unkontrollierter Netzzugriff im CI).
+
+      - name: SBOM-Sanity-Check (wohlgeformtes CycloneDX-JSON)
+        run: |
+          set -euo pipefail
+          jq -e '.bomFormat == "CycloneDX" and (.specVersion | length > 0) and (.components | type == "array")' bom.json > /dev/null
+          echo "==> bom.json: $(jq '.components | length' bom.json) Komponenten."
+
+      - name: SBOM als Artefakt sichern
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-cyclonedx
+          path: bom.json
+          if-no-files-found: error
+          # Nur Pro-Lauf-Aufbewahrung. Persistente Ablage "je Release" (M4)
+          # ist ein separater, hier noch nicht abgedeckter Release-Workflow
+          # (AP6/Release-Pipeline) -- siehe finale Antwort des devops-lead.
+          retention-days: 90
+
+  # --- 7: integration (Testcontainers, Tests kommen mit AP6) ------------------
+  integration:
+    name: Integration-Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: pnpm -r --if-present run test:integration
+        # Testcontainers verwaltet PG16+TimescaleDB-oss selbst über den
+        # Docker-Socket des Runners (ADR §10.5) -- keine services:-Blöcke
+        # nötig. --if-present muss VOR `run` stehen (pnpm-Flag, nicht
+        # Script-Argument), sonst reicht pnpm es an Vitest durch (CACError).
+        run: pnpm -r --if-present run test:integration
+
+  # --- 7b: migrations-rundlauf ------------------------------------------------
+  migrations-rundlauf:
+    name: Migrations-Rundlauf (hoch/runter/hoch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    # `.claude/rules/database-migrations.md` verlangt zu jeder Migration eine
+    # Down-Datei. Bis zum 2026-09-17 wurde keine davon je ausgefuehrt -- sie
+    # wurden geschrieben, gereviewt und nie erprobt. Dieser Job ist die
+    # Deckung fuer diese Zusage (ISO A.8.32) und vergleicht einen
+    # Schema-Fingerabdruck vor dem Rueckbau mit dem danach; er meldet also
+    # nicht nur "kein Fehler", sondern "nichts verloren".
+    services:
+      postgres:
+        # Apache-2-Edition zwingend (.claude/rules/dependencies.md) -- das
+        # `-oss`-Suffix ist hier kein Detail, sondern die Lizenzgrenze.
+        image: timescale/timescaledb:2.15.3-pg16-oss
+        env:
+          POSTGRES_USER: edms_ci
+          POSTGRES_PASSWORD: edms_ci_wegwerf
+          POSTGRES_DB: edms_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U edms_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: Migrations-Runner bauen
+        run: pnpm --filter @edms/migrate run build
+      - name: "Rundlauf: alle Migrationen hoch, die letzten 10 zurueck, wieder hoch"
+        env:
+          DATABASE_URL: postgresql://edms_ci:edms_ci_wegwerf@localhost:5432/edms_ci
+        run: node tools/ci/migrations-rundlauf.mjs --anzahl 10
+
+  # --- 8: secret-scan (PR: Diff-Scan über Commit-Range, KEIN Full-History) ----
+  secret-scan:
+    name: Secret-Scan (gitleaks, Diff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (volle Historie für Diff-Scan)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: gitleaks installieren
+        uses: ./.github/actions/gitleaks-install
+
+      - name: Commit-Range ermitteln
+        id: range
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          zero="0000000000000000000000000000000000000000"
+          if [[ -n "${base}" && "${base}" != "${zero}" ]] && git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            range="${base}..${head}"
+          else
+            echo "==> Kein gültiger Base-Commit -- scanne nur den letzten Commit (${head})."
+            range="-1 ${head}"
+          fi
+          echo "range=${range}" >> "${GITHUB_OUTPUT}"
+
+      - name: "gitleaks Diff-Scan (KEIN Full-History im PR-Pfad, siehe nightly.yml)"
+        run: |
+          gitleaks detect --source . --no-banner --redact \
+            --report-format sarif --report-path gitleaks-report.sarif \
+            --log-opts="${{ steps.range.outputs.range }}"
+
+      - name: SARIF-Report als Artefakt sichern
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.sarif
+          if-no-files-found: warn
+          retention-days: 14
+
+  # --- 9: dco-check ------------------------------------------------------------
+  dco-check:
+    name: DCO-Signoff-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (volle Historie)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: DCO-Signoff aller Commits prüfen
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          bash tools/ci/dco-check.sh "${base}" "${head}"
+
+  # --- 9b: ingest-gate-status (BERICHT, kein Blocker) -------------------------
+  ingest-gate-status:
+    name: Ingest-Gate — Stand der Bedingungen
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+        with:
+          install: "false"
+      - name: Bedingungen für den Real-Daten-Betrieb berichten
+        # BEWUSST OHNE `--verlangen`: Dieser Job ist ein Bericht, kein Gate.
+        # Ein Job, der bis zum Tag der Gate-Öffnung rot steht, wird nach der
+        # zweiten Woche ignoriert oder abgeschaltet — und fehlt dann genau
+        # dann, wenn er zählt. Die Gate-Form (`--verlangen`, Exit 1 bei
+        # offener Bedingung) gehört in den Deploy-Pfad für den
+        # Real-Daten-Betrieb, nicht in die normale Pipeline.
+        #
+        # Nutzen hier: Der Stand steht bei jedem Lauf im Protokoll. Wer
+        # wissen will, woran die Gate-Öffnung noch hängt, muss niemanden
+        # fragen.
+        run: node tools/ci/ingest-gate-status.mjs
+
+      - name: Auch im VERÖFFENTLICHTEN Stand lauffähig
+        # Das Repository erscheint unter Apache-2.0, die Compliance-Akte aber
+        # NICHT (`tools/public-export/exclude.txt`, „niemals öffentlich").
+        # Dieses Skript liegt unter `tools/` und geht damit mit — es liest
+        # also Dateien, die es im veröffentlichten Stand nicht gibt.
+        #
+        # Genau daran ist die erste Fassung gescheitert: unbehandelter
+        # ENOENT, Absturz mit Stacktrace, in jedem Fork. Lokal unsichtbar,
+        # weil hier die Akte liegt. Deshalb wird der Export hier wirklich
+        # nachgestellt, statt sich darauf zu verlassen, dass jemand daran
+        # denkt.
+        run: |
+          set -euo pipefail
+          ziel="$(mktemp -d)"
+          git archive HEAD | tar -x -C "${ziel}" --exclude='compliance' --exclude='compliance/*'
+          if [ -d "${ziel}/compliance" ]; then
+            echo "FEHLER: Die Nachstellung enthält die Akte — der Test prüft dann nichts." >&2
+            exit 1
+          fi
+          ( cd "${ziel}" && node tools/ci/ingest-gate-status.mjs )
+
+  # --- 10: public-export-guard (git archive + Exclude-Manifest, ADR §10.6) ---
+  public-export-guard:
+    name: Public-Export-Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: guard.sh ausführen (git-archive-Export + Manifest-Prüfung)
+        run: bash tools/public-export/guard.sh --out-dir "${RUNNER_TEMP}/public-export"
+
+      - name: Setup pnpm (Node/corepack/Store-Cache -- ohne Install im Haupt-Checkout)
+        # Der pnpm-Store ist global (nutzerweit), nicht Arbeitsverzeichnis-
+        # gebunden -- der untenstehende Install im Export-Baum profitiert
+        # daher trotzdem vom selben, branch-gescopten Cache.
+        uses: ./.github/actions/setup-pnpm
+        with:
+          install: "false"
+
+      - name: "Buildbarkeit des Export-Standes verifizieren (ADR §10.6 (c))"
+        # Eigenständiger Install+Build INNERHALB des gefilterten Export-Baums
+        # (nicht das build-output-Artefakt des Haupt-build-Jobs) -- beweist,
+        # dass die ausgeschlossenen Pfade (compliance/, .claude/,
+        # production/) für Build/Test des Walking Skeleton nicht benötigt
+        # werden.
+        run: |
+          set -euo pipefail
+          export_dir="${RUNNER_TEMP}/public-export/tree"
+          cd "${export_dir}"
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+  # --- 11: dep-audit (SCA/CVE) --------------------------------------------------
+  dep-audit:
+    name: Dependency-Audit (pnpm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: "pnpm audit --prod (Schwellwert: high; final mit security-auditor in Phase 5, ADR §10.3)"
+        run: |
+          # Alternative (Phase-5-Entscheidung security-auditor): osv-scanner
+          # (Apache-2.0), z. B.:
+          #   pnpm dlx @google/osv-scanner@<gepinnte-Version> --lockfile=pnpm-lock.yaml
+          pnpm audit --prod --audit-level high
+
+  # --- Gate: aggregiert alle Pflicht-Jobs zu einem einzigen Required Check ---
+  ci-gate:
+    name: CI Gate (alle Pflicht-Jobs)
+    if: always()
+    needs:
+      - lint
+      - typecheck
+      - unit
+      - build
+      - license-gate
+      - sbom
+      - integration
+      - migrations-rundlauf
+      - secret-scan
+      - dco-check
+      # Der Bericht selbst kann nicht rot werden (Exit 0 auch bei offenen
+      # Bedingungen) — hier steht er, damit er nicht STILL kaputtgehen kann:
+      # Wird ein Compliance-Artefakt umbenannt, faellt das Skript beim Lesen
+      # hin, und das faellt auf. Ein Gate-Bericht, der unbemerkt aufhoert zu
+      # berichten, ist schlimmer als keiner.
+      - ingest-gate-status
+      - public-export-guard
+      - dep-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Ergebnis aller Pflicht-Jobs prüfen
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "Mindestens ein Pflicht-Job ist fehlgeschlagen oder abgebrochen." >&2
+            exit 1
+          fi
+          echo "Alle Pflicht-Jobs grün."

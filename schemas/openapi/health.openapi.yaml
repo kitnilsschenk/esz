@@ -1,0 +1,238 @@
+# EDMS Health API — OpenAPI-Contract (Walking Skeleton, ADR-0001 Phase 2)
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1
+#   - info.title, info.version (SemVer), servers[].url gesetzt
+#   - Security-Scheme oauth2 als Default (global), Health-Endpunkte explizit
+#     als öffentlich markiert (`security: []`)
+#   - Fehler-Shape: application/problem+json nach RFC 9457
+#   - keine generischen object-Responses ohne properties
+#   - Pagination / Idempotency-Key / DELETE: hier nicht einschlägig (nur GET,
+#     keine Listen, keine Mutationen)
+#
+# Enthält bewusst KEINE Fachlogik und KEINE personenbezogenen Daten (DSGVO: n/a).
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Health API
+  version: 0.1.0
+  summary: Liveness- und Readiness-Endpunkte des EDMS Walking Skeleton.
+  description: >
+    Minimaler Health-Contract des Projekt-Skeletts (ADR-0001, Phase 2).
+    Der Liveness-Endpunkt ist öffentlich und unauthentisiert (für Compose-,
+    Kubernetes- und CI-Probes). Der Readiness-Endpunkt prüft zusätzlich die
+    Anbindung an PostgreSQL/TimescaleDB. Es werden keine personenbezogenen
+    Daten verarbeitet.
+  contact:
+    name: EDMS Studio
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Dev-Umgebung (Docker Compose, NestJS-Backend)
+
+tags:
+  - name: health
+    description: Betriebszustand des Dienstes (Liveness/Readiness).
+
+# Default-Security für ALLE Operationen: oauth2 (OIDC via Keycloak, ADR-0002).
+# Öffentliche Operationen überschreiben dies pro Operation mit `security: []`.
+security:
+  - oauth2: []
+
+paths:
+  /health:
+    get:
+      operationId: getLiveness
+      tags: [health]
+      summary: Liveness-Probe (öffentlich)
+      description: >
+        Öffentlicher, unauthentisierter Liveness-Endpunkt. Antwortet ohne
+        Abhängigkeitsprüfung, solange der Prozess läuft. Für Orchestrator- und
+        CI-Probes gedacht.
+      security: []          # explizit öffentlich (kein oauth2)
+      responses:
+        '200':
+          description: Dienst ist lebendig.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessStatus'
+              examples:
+                ok:
+                  summary: Regelfall
+                  value:
+                    status: ok
+                    version: 0.1.0
+                    uptimeSeconds: 42.5
+                    timestamp: '2026-07-09T10:00:00.000Z'
+        '503':
+          description: Dienst nicht verfügbar.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /health/ready:
+    get:
+      operationId: getReadiness
+      tags: [health]
+      summary: Readiness-Probe (öffentlich)
+      description: >
+        Öffentlicher Readiness-Endpunkt. Prüft nachgelagerte Abhängigkeiten;
+        im Skelett ausschließlich PostgreSQL/TimescaleDB via `SELECT 1`.
+        Liefert 503, sobald eine Pflicht-Abhängigkeit nicht erreichbar ist.
+      security: []          # explizit öffentlich (kein oauth2)
+      responses:
+        '200':
+          description: Dienst ist bereit; alle Pflicht-Abhängigkeiten erreichbar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessStatus'
+              examples:
+                ready:
+                  summary: Datenbank erreichbar
+                  value:
+                    status: ok
+                    checks:
+                      database:
+                        status: up
+                    timestamp: '2026-07-09T10:00:00.000Z'
+        '503':
+          description: Nicht bereit; mindestens eine Pflicht-Abhängigkeit down.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                dbDown:
+                  summary: >
+                    Abhängigkeit nicht bereit — generischer, topologie-/PII-freier
+                    Detailtext (KEIN roher DB-/Netzwerk-Fehler).
+                  value:
+                    type: 'https://edms.example/problems/dependency-unavailable'
+                    title: Service Unavailable
+                    status: 503
+                    detail: 'A required dependency is not ready.'
+        default:
+          description: Unerwarteter Fehler.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        OIDC via Keycloak (ADR-0002). Im Skelett noch nicht aktiv; hier nur als
+        globales Default-Scheme deklariert, damit künftige Ressourcen ohne
+        erneute Contract-Änderung geschützt sind (Default = deny).
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.local/realms/edms/protocol/openid-connect/auth
+          tokenUrl: https://auth.example.local/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  schemas:
+    LivenessStatus:
+      type: object
+      additionalProperties: false
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Statischer Liveness-Indikator.
+        version:
+          type: string
+          description: Anwendungsversion (SemVer).
+          examples: ['0.1.0']
+        uptimeSeconds:
+          type: number
+          minimum: 0
+          description: Prozesslaufzeit in Sekunden.
+        timestamp:
+          type: string
+          format: date-time
+          description: Serverzeit in UTC (ISO 8601, Suffix `Z`).
+          examples: ['2026-07-09T10:00:00.000Z']
+
+    ReadinessStatus:
+      type: object
+      additionalProperties: false
+      required: [status, checks, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          description: Aggregierter Bereitschaftsstatus.
+        checks:
+          type: object
+          additionalProperties: false
+          required: [database]
+          properties:
+            database:
+              $ref: '#/components/schemas/DependencyCheck'
+        timestamp:
+          type: string
+          format: date-time
+          description: Serverzeit in UTC (ISO 8601, Suffix `Z`).
+          examples: ['2026-07-09T10:00:00.000Z']
+
+    DependencyCheck:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [up, down]
+          description: Erreichbarkeit der Abhängigkeit.
+        detail:
+          type: string
+          enum: [ready, not_ready]
+          description: >
+            Optionaler, vordefinierter generischer Statustoken. NIEMALS rohe
+            DB-/Netzwerk-Fehlertexte durchreichen — unauthentisierter Endpunkt,
+            kein Topologie-Leak (backend-lead-Finding, hoch). Rohdiagnose gehört
+            ausschließlich ins interne Log.
+
+    Problem:
+      # RFC 9457 erlaubt Extension-Member; daher bewusst KEIN
+      # additionalProperties:false. Dies ist ein Response-Objekt, kein Request-DTO.
+      type: object
+      description: Fehlerobjekt nach RFC 9457 (application/problem+json).
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          default: about:blank
+          description: URI-Referenz, die den Fehlertyp identifiziert.
+        title:
+          type: string
+          description: Kurze, menschenlesbare Zusammenfassung des Fehlertyps.
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+          description: HTTP-Statuscode.
+        detail:
+          type: string
+          description: Menschenlesbare, PII-freie Detailbeschreibung.
+        instance:
+          type: string
+          format: uri
+          description: URI-Referenz, die das konkrete Auftreten identifiziert.

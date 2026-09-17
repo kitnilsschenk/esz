@@ -1,0 +1,688 @@
+# EDMS Nutzerportal — OpenAPI-Contract
+#
+# Status: proposed. Beschreibt, was gebaut ist, nicht was freigegeben ist.
+#
+# WOFUER ES DAS PORTAL GIBT
+#   Die Foerderauflage TB-06 ([Q3] Kap. 6) verlangt die monatliche
+#   Information des Endkunden UND ein Opt-out. Beides war bis hierher nur auf
+#   dem Papierweg moeglich: Der Betrieb druckte die Information und trug den
+#   Widerspruch nach, wenn jemand anrief. Ein digitales Opt-out (DS-03 —
+#   Zeitpunkt und IP belegbar) setzt voraus, dass der Endkunde sich selbst
+#   erklaeren KANN. Genau dafuer existiert dieser Zugang.
+#
+# ZWEI ADRESSATEN, ZWEI TUEREN
+#   `/portal/**` gehoert dem ENDKUNDEN. Er hat kein Keycloak-Konto; er meldet
+#   sich mit Kennung und Passwort an, und die Sitzung haengt an einem
+#   `__Host-`-Cookie. Deshalb tragen diese Operationen `security: []` und
+#   NICHT das globale oauth2 — sie sind nicht oeffentlich, sie sind anders
+#   geschuetzt (`portalSitzung`, s. components).
+#
+#   `/stammdaten/endkunden/{id}/portal-zugang/**` gehoert dem BETRIEB und
+#   laeuft unveraendert ueber Rollen und ABAC. Es steht bewusst unter dem
+#   Endkunden: Einen Zugang auszugeben ist eine Stammdaten-Handlung an einem
+#   Kunden, kein Portal-Vorgang.
+#
+# KEINE ROUTE NIMMT EINE ENDKUNDEN-KENNUNG ENTGEGEN
+#   Nicht im Pfad, nicht im Body, nicht als Query. Sie kommt ausschliesslich
+#   aus der Sitzung. Stuende sie in der URL, waere der Blick in fremde
+#   Verbrauchsdaten eine Frage des Tippens — und die Pruefung, ob beide
+#   uebereinstimmen, eine Zeile, die man vergessen kann.
+#
+# DER ZUGANGSCODE EXISTIERT GENAU EINMAL
+#   `POST .../codes` liefert ihn im Klartext samt fertigem Brief. Gespeichert
+#   wird nur ein gepfefferter Index. Es gibt bewusst KEINE Route, die ihn
+#   erneut liefert: Ein nachschlagbarer Code waere ein Generalschluessel zu
+#   fremden Verbrauchsdaten, und der Betrieb haette ihn dauerhaft in
+#   Reichweite.
+#
+# AUSNAHME VON DER IDEMPOTENCY-KEY-PFLICHT (.claude/rules/api-contracts.md)
+#   Die vier `/portal/auth/*`-Routen und die beiden Widerspruchs-Routen tragen
+#   KEINEN `Idempotency-Key` — dieselbe Linie wie bei den BFF-Routen in
+#   `auth.openapi.yaml`: Es ist Sitzungssteuerung bzw. eine Erklaerung der
+#   betroffenen Person in diesem Augenblick, kein Ressourcen-CRUD. Ein
+#   Endkunde im Browser hat keinen Schluessel zu vergeben. Die
+#   Betriebs-Routen tragen ihn regulaer.
+#
+# Regel-Konformitaet (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - Security-Scheme oauth2 als globaler Default; die Endkunden-Routen
+#     weichen pro Operation begruendet ab.
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Nutzerportal-API
+  version: 0.1.0
+  description: >
+    Der Endkunden-Zugang zum Portal (Anmeldung, eigene Monatsinformationen,
+    digitales Opt-out) und die Betriebssicht auf die Zugangsvergabe.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Entwicklung
+
+security:
+  - oauth2: []
+
+tags:
+  - name: portal-auth
+    description: Anmeldeweg des Endkunden (Sitzungs-Cookie, kein Keycloak-Token)
+  - name: portal-kunde
+    description: Was ein angemeldeter Endkunde über sich sieht und tut
+  - name: portal-zugang
+    description: Betriebssicht auf die Zugangsvergabe (Rollen + ABAC)
+
+paths:
+  /portal/auth/einloesen:
+    post:
+      operationId: portalZugangEinloesen
+      tags: [portal-auth]
+      summary: Zugangscode aus dem Brief einlösen und Passwort setzen
+      security: []
+      description: >
+        Der erste Schritt des Endkunden. Er gibt den Code aus dem
+        Zugangsbrief ein und setzt dabei sein Passwort; danach ist er
+        angemeldet — ein zweiter Anmeldeschritt unmittelbar danach wäre eine
+        Hürde ohne Sicherheitsgewinn.
+
+        Der Code darf mit oder ohne Trennstriche und in beliebiger
+        Groß-/Kleinschreibung eingegeben werden. Er ist einmalig: nach dem
+        Einlösen ist er verbraucht.
+
+        Die Fehlermeldung bei einem falschen oder abgelaufenen Code ist
+        bewusst dieselbe wie bei einem unbekannten — sonst wäre die Antwort
+        eine Auskunft darüber, welche Codes es gibt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PortalEinloesenEingabe' }
+      responses:
+        '200':
+          description: >
+            Eingelöst und angemeldet. Das Sitzungs-Token steht
+            AUSSCHLIESSLICH im `__Host-edms_portal`-Cookie, nicht im Body.
+          headers:
+            Set-Cookie:
+              description: '`__Host-edms_portal` — httpOnly, Secure, SameSite=Strict.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalAnmeldungAntwort' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/auth/anmeldung:
+    post:
+      operationId: portalAnmelden
+      tags: [portal-auth]
+      summary: Anmeldung mit Kennung und Passwort
+      security: []
+      description: >
+        Der reguläre Weg nach dem ersten Einlösen.
+
+        Nach mehreren Fehlversuchen wird der Zugang vorübergehend gesperrt.
+        Die Antwort unterscheidet nicht zwischen „Kennung unbekannt",
+        „Passwort falsch" und „noch kein Passwort gesetzt" — und braucht für
+        eine unbekannte Kennung genauso lange wie für eine bekannte.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PortalAnmeldungEingabe' }
+      responses:
+        '200':
+          description: Angemeldet.
+          headers:
+            Set-Cookie:
+              description: '`__Host-edms_portal` — httpOnly, Secure, SameSite=Strict.'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalAnmeldungAntwort' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/auth/abmeldung:
+    post:
+      operationId: portalAbmelden
+      tags: [portal-auth]
+      summary: Abmelden
+      security: []
+      description: >
+        Beendet die Sitzung und löscht das Cookie. Bewusst OHNE
+        Sitzungspflicht: Eine abgelaufene oder bereits beendete Sitzung soll
+        sich trotzdem abmelden können — sonst bliebe das Cookie im Browser
+        stehen, weil der Server 401 antwortet. Der Vorgang ist idempotent.
+      responses:
+        '204':
+          description: Abgemeldet (auch dann, wenn es nichts zu beenden gab).
+          headers:
+            Set-Cookie:
+              description: Löscht `__Host-edms_portal`.
+              schema: { type: string }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/auth/ich:
+    get:
+      operationId: portalIch
+      tags: [portal-auth]
+      summary: Wer bin ich? — die Probe, dass die Sitzung trägt
+      security:
+        - portalSitzung: []
+      description: >
+        Die Oberfläche prüft damit beim Start, ob eine Sitzung besteht. Sie
+        bekommt bewusst wenig: Kennung und die interne Endkunden-Kennung, mit
+        der sie NICHTS anfordert — der Server nimmt sie ausschließlich aus
+        der Sitzung.
+      responses:
+        '200':
+          description: Angemeldet.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalIch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/informationen:
+    get:
+      operationId: portalInformationen
+      tags: [portal-kunde]
+      summary: Der eigene Verlauf der Monatsinformationen
+      security:
+        - portalSitzung: []
+      description: >
+        Die letzten 24 Monate, neueste zuerst — dieselben Datensätze, die der
+        Betrieb sieht und aus denen der Papierbrief entsteht. Ein eigener
+        Rechenweg im Portal wäre eine zweite Wahrheit, und die Stelle, an der
+        sie abweicht, wäre ausgerechnet die Auskunft an die betroffene
+        Person.
+      responses:
+        '200':
+          description: Verlauf, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Nutzerinformation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/informationen/{informationId}/bericht:
+    get:
+      operationId: portalBericht
+      tags: [portal-kunde]
+      summary: Eine Monatsinformation im Detail
+      security:
+        - portalSitzung: []
+      parameters:
+        - name: informationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Der Bericht zu einem Monat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NutzerinfoBericht' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Die Information gehört nicht zu diesem Zugang. Bewusst **403**
+            und nicht 404: Der Unterschied wäre eine Auskunft darüber, welche
+            Kennungen existieren.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/informationen/{informationId}/dokument:
+    get:
+      operationId: portalDokument
+      tags: [portal-kunde]
+      summary: Dieselbe Information als druckfertiges Dokument
+      security:
+        - portalSitzung: []
+      description: >
+        Genau das Dokument, das auch per Post ginge — zum Ausdrucken oder
+        Aufheben. Eigenständiges HTML ohne Skript und ohne externe Verweise.
+      parameters:
+        - name: informationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Druckfertiges HTML.
+          content:
+            text/html:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Die Information gehört nicht zu diesem Zugang.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/widerspruch:
+    get:
+      operationId: portalWiderspruchStand
+      tags: [portal-kunde]
+      summary: Steht ein Widerspruch gegen die monatliche Information?
+      security:
+        - portalSitzung: []
+      responses:
+        '200':
+          description: Der aktuelle Stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalWiderspruchStand' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: portalWidersprechen
+      tags: [portal-kunde]
+      summary: Der monatlichen Information widersprechen (Opt-out, TB-06)
+      security:
+        - portalSitzung: []
+      description: >
+        Das digitale Opt-out, das Kap. 6 verlangt.
+
+        **Ohne Body.** Der Zweck steht fest (`nutzerinformation` — der
+        einzige, gegen den ein Endkunde widersprechen kann), und der
+        Erklärungszeitpunkt ist jetzt. Hier trägt niemand etwas nach.
+
+        Zeitpunkt, IP und User-Agent werden als Beleg festgehalten (DS-03).
+        Die IP kommt aus der Verbindung, nicht aus dem Body: Eine vom Client
+        gelieferte wäre kein Nachweis, sondern eine Behauptung.
+
+        Ein zweiter Widerspruch, während schon einer wirksam ist, antwortet
+        **409**.
+      responses:
+        '200':
+          description: Widerspruch erklärt; der neue Stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalWiderspruchStand' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /portal/widerspruch/ruecknahme:
+    post:
+      operationId: portalWiderspruchZuruecknehmen
+      tags: [portal-kunde]
+      summary: Den Widerspruch zurücknehmen
+      security:
+        - portalSitzung: []
+      description: >
+        Der Kunde will wieder informiert werden.
+
+        Die Zeile bleibt erhalten; gelöscht verschwände der Nachweis über den
+        Zeitraum, in dem widersprochen war — und genau der entscheidet, ob in
+        dieser Zeit informiert werden durfte.
+
+        Besteht kein wirksamer Widerspruch, antwortet der Vorgang **403** und
+        nicht still mit Erfolg: Wer glaubt, etwas zurückzunehmen, das es
+        nicht gibt, hat eine falsche Vorstellung vom Zustand.
+      responses:
+        '200':
+          description: Zurückgenommen; der neue Stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalWiderspruchStand' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /stammdaten/endkunden/{endkundeId}/portal-zugang:
+    get:
+      operationId: portalZugangStand
+      tags: [portal-zugang]
+      summary: Betriebssicht auf den Portal-Zugang eines Endkunden
+      description: >
+        ABAC-Aktion `read:stammdaten`. Rollen `betrieb` und
+        `compliance-auditor`.
+
+        Ohne Code und ohne Hash. Es gibt bewusst keine Route, die einen
+        ausgegebenen Code erneut liefert.
+
+        Das Lesen bleibt auch bei einem gesperrten Endkunden erlaubt: Der
+        Betrieb muss sehen können, dass es einen Zugang gibt, gerade wenn er
+        ihn sperren will.
+      parameters:
+        - name: endkundeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 'Der Stand — auch dann, wenn noch kein Zugang besteht (`vorhanden: false`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalZugangStand' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /stammdaten/endkunden/{endkundeId}/portal-zugang/codes:
+    post:
+      operationId: portalZugangCodeAusgeben
+      tags: [portal-zugang]
+      summary: Zugangscode ausgeben — der einzige Moment, in dem er im Klartext existiert
+      description: >
+        ABAC-Aktion `create:endkunde`. Rolle `betrieb`.
+
+        Beim ersten Mal entsteht dabei der Zugang, danach ist es ein
+        Ersatzbrief für denselben. Ein bestehendes Passwort bleibt stehen:
+        Der neue Code ersetzt nur den alten Brief, er ist kein
+        Passwort-Reset.
+
+        **Die Antwort enthält den Code und den fertigen Brief genau einmal.**
+        Wer sie verwirft, ohne zu drucken, gibt einen neuen Code aus; der
+        alte wird dabei ungültig.
+
+        Für einen gesperrten oder gelöschten Endkunden (Art. 18/17 DSGVO)
+        antwortet der Vorgang **409** — einen neuen Zugriffsweg zu eröffnen
+        wäre das Gegenteil einer Einschränkung. Aus einer Zugangs-Sperre
+        führt ebenfalls kein neuer Code heraus.
+
+        Audit `portal.zugang.ausgegeben`.
+      parameters:
+        - name: endkundeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Ausgegeben — Code und Brief, einmalig.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalZugangAusgabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /stammdaten/endkunden/{endkundeId}/portal-zugang/sperre:
+    post:
+      operationId: portalZugangSperren
+      tags: [portal-zugang]
+      summary: Zugang sperren und alle offenen Sitzungen beenden
+      description: >
+        ABAC-Aktion `update:endkunde`. Rolle `betrieb`.
+
+        Beides gehört zusammen: Ein gesperrter Zugang, unter dem jemand
+        angemeldet bleibt, ist eine Ankündigung, keine Maßnahme.
+
+        Aus einer Sperre führt kein neuer Code heraus — sie ist bewusst kein
+        Zustand, der sich von selbst auflöst.
+
+        Audit `portal.abmeldung` mit `grund = gesperrt`.
+      parameters:
+        - name: endkundeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Gesperrt; der neue Stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortalZugangStand' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OIDC (Keycloak) — Bearer-Token aus dem BFF. Gilt für die Betriebs-Routen.
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/edms/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8080/realms/edms/protocol/openid-connect/token
+          scopes: {}
+    portalSitzung:
+      type: apiKey
+      in: cookie
+      name: __Host-edms_portal
+      description: >
+        Die Portal-Sitzung des Endkunden. httpOnly, Secure, SameSite=Strict —
+        JavaScript kann sie nicht lesen, und der Browser sendet sie bei keiner
+        Cross-Site-Anfrage. Sie ist KEIN Keycloak-Token und trägt keine Rolle;
+        sie identifiziert genau einen Endkunden.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+      description: Pflicht auf den schreibenden Betriebs-Routen (.claude/rules/api-contracts.md).
+
+  schemas:
+    PortalEinloesenEingabe:
+      type: object
+      additionalProperties: false
+      required: [code, passwort]
+      properties:
+        code:
+          type: string
+          minLength: 8
+          maxLength: 64
+          description: Der Code aus dem Brief — mit oder ohne Trennstriche, Groß-/Kleinschreibung egal.
+        passwort:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: >
+            Das Passwort, das der Kunde dabei setzt. Die Mindestlänge prüft
+            der Server mit einer KONKRETEN Meldung — anders als beim
+            Anmelden, wo jede Auskunft eine Auskunft zu viel wäre.
+    PortalAnmeldungEingabe:
+      type: object
+      additionalProperties: false
+      required: [kennung, passwort]
+      properties:
+        kennung: { type: string, minLength: 3, maxLength: 32 }
+        passwort: { type: string, minLength: 1, maxLength: 200 }
+    PortalAnmeldungAntwort:
+      type: object
+      additionalProperties: false
+      required: [kennung, laeuftAbAt]
+      properties:
+        kennung: { type: string }
+        laeuftAbAt:
+          type: string
+          format: date-time
+          description: Wann die Sitzung endet. Das Token selbst steht NICHT im Body.
+    PortalIch:
+      type: object
+      additionalProperties: false
+      required: [kennung, endkundeId]
+      properties:
+        kennung: { type: string }
+        endkundeId:
+          type: string
+          format: uuid
+          description: >
+            Steht hier, damit die Oberfläche weiß, wessen Daten sie zeigt —
+            NICHT, damit sie irgendwo als Parameter mitgegeben würde.
+    PortalWiderspruchStand:
+      type: object
+      additionalProperties: false
+      required: [zweckCode, wirksam, erklaertAt, widerspruchId]
+      properties:
+        zweckCode: { type: string, description: Immer `nutzerinformation`. }
+        wirksam: { type: boolean }
+        erklaertAt: { type: [string, 'null'], format: date-time }
+        widerspruchId: { type: [string, 'null'], format: uuid }
+    PortalZugangStatus:
+      type: string
+      enum: [ausgegeben, aktiv, gesperrt]
+      description: >
+        `ausgegeben` = Code ausgegeben, noch nicht eingelöst. `aktiv` =
+        eingelöst, Passwort gesetzt. `gesperrt` = vom Betrieb gesperrt; daraus
+        führt kein neuer Code heraus.
+
+
+        Die drei Werte sind wörtlich der CHECK-Constraint
+        `ck_portal_zugang_status` (V0066). Bis 2026-09-16 stand hier `offen`
+        statt `ausgegeben` — ein Wert, den das Backend nie geliefert hat. Der
+        generierte Client übernahm ihn, die Betriebssicht schlug den
+        tatsächlich gelieferten Status in einer Tabelle nach, die ihn nicht
+        kannte, und riss beim Übersetzen die gesamte Endkunden-Detailseite in
+        die Fehlergrenze. Gefunden erst durch einen Browser-Test, der den
+        Zugang wirklich ausgegeben hat.
+    PortalZugangStand:
+      type: object
+      additionalProperties: false
+      required: [endkundeId, vorhanden, kennung, status, codeOffenBis, passwortGesetzt, gesperrtBis]
+      properties:
+        endkundeId: { type: string, format: uuid }
+        vorhanden: { type: boolean }
+        kennung: { type: [string, 'null'] }
+        status:
+          oneOf:
+            - $ref: '#/components/schemas/PortalZugangStatus'
+            - type: 'null'
+        codeOffenBis: { type: [string, 'null'], format: date-time }
+        passwortGesetzt: { type: boolean }
+        gesperrtBis:
+          type: [string, 'null']
+          format: date-time
+          description: 'Vorübergehende Sperre nach zu vielen Fehlversuchen — nicht dasselbe wie `status = gesperrt`.'
+    PortalZugangAusgabe:
+      type: object
+      additionalProperties: false
+      required: [kennung, code, gueltigBis, erneut, brief, portalUrl, portalUrlIstStandard]
+      properties:
+        kennung: { type: string }
+        code:
+          type: string
+          description: >
+            Klartext, gehört in den Brief. Wird NIRGENDS gespeichert und ist
+            nicht erneut abrufbar.
+        gueltigBis: { type: string, format: date-time }
+        erneut: { type: boolean, description: '`true` = Ersatzbrief für einen bestehenden Zugang.' }
+        brief:
+          type: string
+          description: >
+            Der druckfertige Zugangsbrief als eigenständiges HTML. Er kommt
+            mit, weil ihn eine zweite Route nicht mehr erzeugen könnte — der
+            Code steht nirgends.
+        portalUrl: { type: string, description: Die Adresse, die im Brief steht. }
+        portalUrlIstStandard:
+          type: boolean
+          description: '`true` = `EDMS_PORTAL_URL` ist nicht gesetzt, im Brief steht die Dev-Adresse.'
+
+    BerichtGruppe:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, bezeichnung, verbrauchKwh, anteilPct]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        bezeichnung: { type: string }
+        verbrauchKwh: { type: number }
+        anteilPct: { type: number }
+    Zustellweg:
+      type: string
+      enum: [portal_bereitgestellt, email, brief, persoenlich]
+    Nutzerinformation:
+      type: object
+      additionalProperties: false
+      required: [id, endkundeId, energietraeger, monat, berechnungslaufId, referenzKwh, istKwh, deltaKwh, qualitaetsStufe, abdeckungPct, tageFehlend, kandidatenAnzahl, inhaltHashHex, erzeugtAt, zugestelltAt, zustellweg]
+      properties:
+        id: { type: string, format: uuid }
+        endkundeId: { type: string, format: uuid }
+        energietraeger: { type: string }
+        monat: { type: string, format: date }
+        berechnungslaufId: { type: string, format: uuid }
+        referenzKwh: { type: number }
+        istKwh: { type: number }
+        deltaKwh: { type: number, description: 'Positiv = Einsparung, negativ = Mehrverbrauch.' }
+        qualitaetsStufe: { type: string, enum: [belastbar, eingeschraenkt, nicht_ausweisbar] }
+        abdeckungPct: { type: number }
+        tageFehlend: { type: integer }
+        kandidatenAnzahl: { type: integer }
+        inhaltHashHex: { type: string }
+        erzeugtAt: { type: string, format: date-time }
+        zugestelltAt: { type: [string, 'null'], format: date-time }
+        zustellweg:
+          oneOf:
+            - $ref: '#/components/schemas/Zustellweg'
+            - type: 'null'
+    NutzerinfoBericht:
+      type: object
+      additionalProperties: false
+      required: [information, vonTag, bisTag, gruppen, zugeordnetKwh, nichtZugeordnetKwh, ohneTageswerte, vormonatDeltaKwh, vormonatIstKwh]
+      properties:
+        information: { $ref: '#/components/schemas/Nutzerinformation' }
+        vonTag: { type: string, format: date }
+        bisTag: { type: string, format: date }
+        gruppen:
+          type: array
+          items: { $ref: '#/components/schemas/BerichtGruppe' }
+        zugeordnetKwh: { type: number }
+        nichtZugeordnetKwh: { type: number }
+        ohneTageswerte: { type: boolean }
+        vormonatDeltaKwh: { type: [number, 'null'] }
+        vormonatIstKwh: { type: [number, 'null'] }
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457.
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Nicht angemeldet oder Sitzung abgelaufen.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Nicht berechtigt.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NichtGefunden:
+      description: Nicht gefunden.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Konflikt:
+      description: Konflikt mit dem aktuellen Zustand.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unerwartet:
+      description: Unerwarteter Fehler.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }

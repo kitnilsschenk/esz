@@ -1,0 +1,30 @@
+{
+  "name": "@edms/migrate",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "EDMS SQL-Migrations-Runner (ADR-0001 §10.4) — CLI (up/down/status) für migrations/**: Namens-/Lückenlosigkeits-Validierung, Checksum-Integrität, pg_advisory_lock, transaktionale Anwendung.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "edms-migrate": "dist/cli.js"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json",
+    "up": "node dist/cli.js up",
+    "down": "node dist/cli.js down",
+    "status": "node dist/cli.js status"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.11.10",
+    "vitest": "^2.1.8"
+  }
+}

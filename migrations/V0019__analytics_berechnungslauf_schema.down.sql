@@ -1,0 +1,69 @@
+-- V0019__analytics_berechnungslauf_schema.down.sql
+--
+-- Rollt Schema `analytics` (ADR-0006 Teil B, D1/D2/D3) und die additive
+-- Tabelle `energy.baseline_periode` vollstaendig zurueck. Greenfield-
+-- Migration (kein Bestandsschema, ADR-0006 selbst Status "proposed" --
+-- diese Migration ist Design-Entwurf, s. Up-Datei-Kopf) -- KEINE
+-- Produktivdaten, `DROP SCHEMA analytics CASCADE` ist hier vertretbar.
+--
+-- WICHTIG (wie V0010-Down-Datei): `energy.baseline_periode` liegt AUSSERHALB
+-- des Schemas `analytics` und wird von `DROP SCHEMA analytics CASCADE` NICHT
+-- erfasst -- explizit vorab entfernt.
+
+-- =====================================================================
+-- (1) Additiv in energy: baseline_periode (ausserhalb von `analytics`)
+-- =====================================================================
+-- ACHTUNG: schlaegt fehl, falls eine SPAETERE Migration (z. B. ADR-0007) eine
+-- FK-Referenz auf energy.baseline_periode.id angelegt hat -- in diesem Fall
+-- zuerst jene Migration zurueckrollen.
+DROP TABLE energy.baseline_periode;
+
+-- =====================================================================
+-- (2) Schema-CASCADE-Drop
+-- =====================================================================
+-- Entfernt alle Tabellen (verfahren, verfahren_version, eingang_snapshot,
+-- eingang_messwert_tag, eingang_klima_tag, eingang_einflussgroesse,
+-- klima_tag, berechnungslauf, laufergebnis, lauf_auftrag,
+-- lauf_retention_status), Trigger, analytics.set_updated_at() -- alles
+-- ausschliesslich V0019-Eigentum. Schema-USAGE-Grants an edms_app/
+-- edms_retention/edms_analytics_detail_reader sind an das Schema-Objekt
+-- selbst gebunden und verschwinden mit ihm -- keine gesonderte REVOKE-
+-- Anweisung noetig (anders als V0010, wo Grants auf FREMDEN Schema-Objekten
+-- (energy.zaehler) vergeben wurden -- diese Migration vergibt keine Grants
+-- ausserhalb von `analytics`/`energy.baseline_periode`, Letzteres bereits in
+-- Schritt (1) entfernt).
+--
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): Greenfield-Migration ohne Produktivdaten ->
+-- .claude/rules/database-migrations.md verlangt HIER keinen gesonderten
+-- Backup-Nachweis. Wurde diese Migration bereits mit echten (auch
+-- synthetischen Pilot-)Daten befuellt, ist vor diesem Rollback ein Backup zu
+-- ziehen und die User-Freigabe einzuholen (devops-lead-Abstimmung, analog
+-- V0002/V0003/V0008/V0010).
+DROP SCHEMA analytics CASCADE;
+
+-- =====================================================================
+-- (3) Rollen bewusst NICHT gedroppt (dokumentierter Teil-No-Op,
+-- V0003/V0010-Praezedenzfall)
+-- =====================================================================
+-- Begruendung (analog V0003/V0010):
+--   (a) Rollen sind CLUSTER-, nicht datenbankweit -- dieser Rollback kann
+--       aus der aktuellen Datenbank heraus nicht sicher pruefen, ob
+--       edms_analytics_owner/edms_retention/edms_analytics_detail_reader in
+--       einer ANDEREN Datenbank desselben Clusters noch Grantee/Owner sind.
+--   (b) Nach Schritt (2) besitzt keine der drei Rollen mehr irgendein
+--       Privileg auf ein konkretes Objekt dieses Features -- die
+--       verbleibende Rollen-Huelle ist inert/harmlos.
+--   (c) `edms_retention` ist bewusst NICHT analytics-spezifisch benannt
+--       (D-A6-RETENTION, Up-Datei) -- ein Drop hier waere ein versteckter
+--       Bruch fuer kuenftige, andere Schemata betreffende Migrationen, die
+--       dieselbe Rolle voraussichtlich weiterverwenden.
+--
+-- Wer diese Migration auf einer isolierten Dev-/Test-Instanz wirklich
+-- vollstaendig zurueckrollen will (inkl. Rollen), tut das bewusst und manuell
+-- ausserhalb des Runners -- NICHT ueber diese Datei:
+--   DROP ROLE IF EXISTS edms_analytics_owner;
+--   DROP ROLE IF EXISTS edms_retention;
+--   DROP ROLE IF EXISTS edms_analytics_detail_reader;
+-- (Nur zulaessig, wenn KEINE Folge-Migration edms_retention bereits fuer ein
+-- anderes Schema weiterverwendet -- sonst schlaegt DROP ROLE fehl.)

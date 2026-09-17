@@ -1,0 +1,36 @@
+# Dependabot-Konfiguration (ADR-0001-projekt-skelett.md, Abschnitt 10.3,
+# devops-lead-Votum "Action-Update-Prozess"). Aktualisiert SHA-gepinnte
+# GitHub-Actions sowie npm/pnpm-Abhängigkeiten. Renovate (AGPL-3.0) wurde
+# bewusst NICHT gewählt, um keine AGPL-Fläche im Tooling zu haben
+# (.claude/rules/dependencies.md).
+
+version: 2
+updates:
+  # GitHub Actions: aktualisiert SHA-gepinnte "uses:"-Referenzen (inkl. des
+  # Versions-Kommentars daneben) in .github/workflows/** und
+  # .github/actions/**.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # npm/pnpm: Dependabot erkennt pnpm-workspace.yaml + pnpm-lock.yaml
+  # automatisch unter dem "npm"-Ecosystem-Key (kein separater
+  # "pnpm"-Ecosystem-Wert nötig).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    versioning-strategy: "increase"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "npm"

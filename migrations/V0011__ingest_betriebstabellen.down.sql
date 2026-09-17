@@ -1,0 +1,29 @@
+-- V0011__ingest_betriebstabellen.down.sql
+--
+-- Rollt den Namensraum `ingest` (ADR-0005 §25/§27, Worker-Betriebstabellen)
+-- vollstaendig zurueck. Greenfield-Migration (kein Bestandsschema, keine
+-- Produktivdaten -- Ingest-Gate bleibt geschlossen, s. V0010-Datei-Kopf) --
+-- `DROP SCHEMA ingest CASCADE` ist hier vertretbar: alle Tabellen/Funktionen/
+-- Trigger/Indizes/Constraints/Grants in diesem Schema wurden AUSSCHLIESSLICH
+-- von V0011 angelegt.
+--
+-- ANDERS ALS V0010: diese Migration vergibt KEINE Grants ausserhalb des
+-- Schemas `ingest` -- `DROP SCHEMA ingest CASCADE` entfernt daher saemtliche
+-- Spuren (inkl. der GRANT-Zeilen fuer edms_ingest_worker auf den drei
+-- Tabellen) vollstaendig, ohne dass ein gesonderter REVOKE-Schritt noetig
+-- waere.
+--
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): Greenfield-Migration ohne Produktivdaten ->
+-- .claude/rules/database-migrations.md verlangt HIER keinen gesonderten
+-- Backup-Nachweis. Wurde diese Migration bereits auf einer Instanz MIT
+-- echten (auch synthetischen Pilot-)Daten angewendet (z. B. bereits
+-- quarantaenisierte Dead-Letter-Zeilen), ist vor diesem Rollback ein Backup
+-- zu ziehen und die User-Freigabe einzuholen (devops-lead-Abstimmung,
+-- analog V0002/V0003/V0008/V0010-Down-Dateien).
+--
+-- Rolle `edms_ingest_worker` (aus V0010) wird hier NICHT angefasst -- sie
+-- gehoert V0010, nicht dieser Migration, und wird voraussichtlich von V0013
+-- weiterverwendet (s. V0010-Down-Datei, Punkt 3).
+
+DROP SCHEMA ingest CASCADE;

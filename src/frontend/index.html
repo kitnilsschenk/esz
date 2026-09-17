@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Das Signet als Favicon: Es traegt auf hellem wie dunklem Tab-Hintergrund
+         (Grünverlauf, keine schwarze Schrift) und ist das einzige Zeichen der
+         Marke, das bei 16 px noch erkennbar bleibt. Unveraendert uebernommen. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- „Systemstatus" stimmte seit dem Betriebs-UI nicht mehr: Die Startseite
+         ist der Arbeitsplatz, der Systemstatus liegt unter /verwaltung. -->
+    <title>EDMS — KIT Consulting</title>
+    <!-- Dark-/Light-Mode: Theme-Klasse VOR dem ersten Paint setzen (Phase
+         4c-Feinschliff, `shared/theme/useTheme.ts`) — verhindert ein
+         sichtbares Umspringen zwischen System-Default und gespeicherter
+         Wahl, bevor React geladen ist. Duplikat der (sehr kleinen)
+         Auflösungslogik aus `useTheme.ts` ist hier unvermeidbar (reines
+         Inline-Skript, kein Modul-Import vor React) — derselbe
+         `localStorage`-Schlüssel (`edms-theme`) wie dort, NICHTS
+         PII-/Token-Haltiges. -->
+    <script>
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('edms-theme');
+          var dark =
+            stored === 'dark' ||
+            (stored !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (error) {
+          // localStorage/matchMedia nicht verfügbar (z. B. privates Fenster)
+          // — System-Default bleibt hell, kein Absturz.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

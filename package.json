@@ -1,0 +1,33 @@
+{
+  "name": "edms",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "EDMS monorepo root (pnpm workspace) — see docs/adr/ADR-0001-projekt-skelett.md.",
+  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm -r run test",
+    "test:integration": "pnpm -r --if-present run test:integration",
+    "build": "pnpm -r run build",
+    "generate:api": "node src/shared/scripts/generate-api.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "eslint": "^9.17.0",
+    "typescript-eslint": "^8.19.0",
+    "prettier": "^3.4.2",
+    "eslint-config-prettier": "^9.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild"
+    ]
+  }
+}

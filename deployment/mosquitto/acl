@@ -1,0 +1,21 @@
+# Mosquitto-ACL — Least Privilege je Identitaet (ADR-0005 §13/§15)
+#
+# Grundsatz: jede Identitaet bekommt GENAU das eine Recht, das ihre Rolle
+# braucht — analog zur spaltenscharfen DB-Rolle `edms_ingest_worker` (RL-1,
+# V0010). Ein kompromittierter Publisher kann keine Uplinks mitlesen, ein
+# kompromittierter Worker keine faelschen.
+#
+# Topic-Schema (ADR-0005 §14): application/<applicationId>/device/<DevEUI>/event/up
+
+# Ingest-Worker: NUR lesen (subscribe). Kein `write` — der Worker publiziert
+# niemals, und Auto-Provisioning ueber gefaelschte Uplinks ist damit schon auf
+# Broker-Ebene ausgeschlossen (Ergaenzung zu Design-Prinzip 4/RL-4).
+user edms_worker
+topic read application/+/device/+/event/up
+
+# Synthetischer Publisher: NUR schreiben (publish). Kein `read` — er darf
+# nicht mitlesen, was andere einspeisen.
+# ENTFAELLT bei Real-Ingest: dann publiziert ChirpStack (externer Stack) mit
+# eigener Identitaet, dieser Dev-Account wird ersatzlos entfernt.
+user edms_publisher
+topic write application/+/device/+/event/up

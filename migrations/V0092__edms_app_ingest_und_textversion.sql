@@ -1,0 +1,107 @@
+-- V0092__edms_app_ingest_und_textversion.sql
+--
+-- Nachtrag zu V0091: die restlichen Rechte, die `edms_app` fehlen, damit die
+-- Anwendung unter ihrer eigenen Laufzeitrolle arbeiten kann.
+--
+-- Hergeleitet NICHT aus dem Quelltext, sondern aus dem Lauf: Die
+-- Integrationstests wurden unter einer echten `edms_app`-Login-Rolle
+-- gefahren, und diese Migration schliesst genau die Luecken, die dabei als
+-- "permission denied" aufgetreten sind. Das ist die verlaesslichere
+-- Herleitung — sie findet auch die Pfade, die eine statische Suche uebersieht.
+--
+-- Was dabei AUSDRUECKLICH NICHT ergaenzt wird, steht am Ende. Es sind drei
+-- Faelle, und sie sind der eigentliche Ertrag dieses Laufs.
+
+-- =====================================================================
+-- (1) Schema-USAGE auf `ingest`
+-- =====================================================================
+-- Derselbe Fall wie bei `identity` und `measurement` in V0091: `edms_app`
+-- traegt auf vier `ingest`-Tabellen bereits Rechte (V0039/V0041/V0059/V0085),
+-- konnte sie aber mangels Schema-USAGE nie ausueben. Vier Grant-Saetze, die
+-- richtig aussahen und es nie waren — weil niemand sie unter der Rolle
+-- ausprobiert hat.
+GRANT USAGE ON SCHEMA ingest TO edms_app;
+
+-- =====================================================================
+-- (2) Lesende Rechte auf den Betriebszustand der Aufnahme
+-- =====================================================================
+-- Die Betriebssicht (`/monitoring/ingest-betrieb`, ADR-0011 A2) beantwortet
+-- "kommt etwas an, und was bleibt liegen?". Dafuer liest sie den Zustand,
+-- den der WORKER schreibt — und nur lesend: Kein INSERT, kein UPDATE. Der
+-- Schreibpfad auf diese Tabellen gehoert `edms_ingest_worker`, und diese
+-- Trennung ist der Grund, warum die Betriebssicht ueberhaupt etwas aussagt.
+-- Eine API, die den Herzschlag selbst setzen koennte, koennte auch einen
+-- Ausfall verdecken.
+GRANT SELECT ON ingest.kanal_status    TO edms_app;
+GRANT SELECT ON ingest.quelle_status   TO edms_app;
+GRANT SELECT ON ingest.ausfall_vorgang TO edms_app;
+
+-- =====================================================================
+-- (3) consent.text_version — SPALTENSCHARFES UPDATE, und nur auf gueltig_bis
+-- =====================================================================
+-- `ConsentRepository.schliesseOffeneTextVersion()` setzt `gueltig_bis`, wenn
+-- eine neue Fassung veroeffentlicht wird — das Schliessen eines
+-- SCD2-Intervalls, derselbe Vorgang, fuer den `edms_einfluss` auf
+-- `einfluss.intervall` ein spaltenscharfes `UPDATE (gueltig_bis_monat)`
+-- bekommt (V0020 D-UPDATE-SCOPE).
+--
+-- WARUM NICHT TABELLENWEIT: `consent.text_version` traegt `wortlaut` — den
+-- WORTLAUT, dem eine Person zugestimmt hat. Ein tabellenweites UPDATE
+-- erlaubte, ihn nachtraeglich zu aendern. Damit waere der Nachweis nach
+-- Art. 7 Abs. 1 wertlos: Was belegt eine Einwilligung, wenn der Text, auf
+-- den sie sich bezieht, hinterher ein anderer sein kann? Die Spaltenschaerfe
+-- ist hier keine Feinheit, sondern die ganze Aussage.
+--
+-- `wortlaut_sha256` steht daneben und wuerde eine Aenderung entdecken
+-- lassen — aber entdecken ist weniger als verhindern.
+GRANT UPDATE (gueltig_bis) ON consent.text_version TO edms_app;
+
+-- =====================================================================
+-- (4) WAS HIER FEHLT UND WARUM — drei dokumentierte Kontrollen, die es
+--     im Code nicht gibt
+-- =====================================================================
+-- Der Testlauf unter `edms_app` hat drei weitere Zugriffe gemeldet. Keiner
+-- davon wird hier gewaehrt, weil ein Grant in allen drei Faellen eine
+-- dokumentierte Schutzmassnahme stillschweigend aufgeben wuerde:
+--
+--   (a) `einfluss.*` — `toms.md` Abschnitt 11: "`edms_app` hat auf
+--       `einfluss.*` bewusst KEINEN Grant", weil dort als einzigem Ort
+--       Klartext-PII ohne Feldverschluesselung liegt und die Trennung
+--       "STRUKTURELL ueber eine eigene DB-Rolle erzwungen" wird. SECHS
+--       Repositories greifen dennoch ueber die Hauptverbindung zu.
+--
+--   (b) `nachweis.export_pseudonym` — `toms.md` Abschnitt 12: "`edms_app`
+--       erhaelt auf diese Tabelle KEINEN Grant"; sie haelt als einzige die
+--       Zuordnung `endkunde_id <-> Export-Pseudonym`. Ein Repository greift
+--       ueber die Hauptverbindung zu.
+--
+--   (c) `ingest.eingang_quarantaene` (UPDATE/DELETE) — `toms.md`
+--       Abschnitt 11: Schreiben (`edms_app`) und Loeschen (`edms_retention`)
+--       sind "rollen-disjunkt (Separation of Duties)". Der
+--       Quarantaene-Retentionslauf faehrt trotzdem ueber die
+--       Hauptverbindung.
+--
+-- DER GEMEINSAME BEFUND, und er ist groesser als die Summe der drei:
+-- Es gibt im gesamten Quelltext KEINE Stelle, die je unter
+-- `edms_retention`, `edms_einfluss` oder `edms_nachweis_renderer` verbindet.
+-- Die Rollen existieren, ihre Rechte sind sorgfaeltig geschnitten, und die
+-- Kommentare im Code beschreiben sie, als waeren sie in Kraft. Tatsaechlich
+-- laeuft alles ueber eine Verbindung. Die TOMs sagen an einer Stelle selbst
+-- voraus, woran das liegt: "Die Aussage 'nur der Renderer greift zu' ist
+-- sonst eine Aussage ueber Code und keine ueber Grants" (Abschnitt 12,
+-- DSFA-0001 Risiko 14-B). Genau so ist es gekommen.
+--
+-- Das ist mit Grants nicht zu heilen. Die betroffenen Repositories muessen
+-- auf eigene Verbindungs-Pools unter der jeweiligen Rolle umgestellt werden
+-- — so, wie `einfluss/persistence/tb03-einfluss.repository.ts` und der
+-- gesamte Ingest-Worker es bereits vormachen. Das ist ein Umbau mit einer
+-- echten Folge (der Verlust der ambienten Transaktion an diesen Stellen)
+-- und gehoert nicht in eine Rechte-Migration.
+--
+-- Bis dahin gilt: Die Anwendung kann unter `edms_app` alles AUSSER diesen
+-- drei Pfaden. Reproduzierbar mit
+--
+--     EDMS_TEST_APP_ROLLE=1 pnpm --filter @edms/backend test:integration
+--
+-- Dieser Lauf ist die Abnahmebedingung fuer den Umbau: Wenn er gruen ist,
+-- sind die drei Kontrollen echt.

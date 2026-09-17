@@ -1,0 +1,14 @@
+# pnpm Workspace-Definition (ADR-0001, Abschnitt 10.1)
+#
+# Listet die Monorepo-Pakete. Geteilte Tooling-Configs (tsconfig.base.json,
+# eslint.config.mjs, .prettierrc.json, .prettierignore) liegen bewusst im
+# Repo-Root, nicht in einem eigenen "packages/"-Verzeichnis.
+#
+# tools/migrate (@edms/migrate) ist der SQL-Migrations-Runner aus ADR-0001
+# §10.4, ergänzt in Phase 4 / AP3 (Dev-Stack + Migrations-Runner).
+
+packages:
+  - "src/backend"
+  - "src/frontend"
+  - "src/shared"
+  - "tools/migrate"

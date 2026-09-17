@@ -1,0 +1,1 @@
+export { HerkunftMappingAbschnitt } from './HerkunftMappingAbschnitt';

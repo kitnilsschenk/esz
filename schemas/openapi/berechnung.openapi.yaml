@@ -1,0 +1,748 @@
+# EDMS Berechnungslauf-API (ADR-0006 Teil B, Baseline & Witterungsbereinigung)
+# — OpenAPI-Contract (backend-lead-Arbeitsauftrag, Status: proposed)
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Security-Scheme oauth2 als GLOBALER Default (JwtAuthGuard) — kein
+#     öffentlicher Endpoint.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - `POST /berechnung/laeufe` trägt `Idempotency-Key` (PFLICHT) — ECHTE
+#     Replay-Deduplizierung ist NICHT implementiert (dokumentierter Gap,
+#     s. `stammdaten/common/idempotency-key.decorator.ts` "OFFENER PUNKT"),
+#     die Header-Präsenz/-Format wird geprüft. Reale Wiederholungsfestigkeit
+#     kommt aus der content-addressed Snapshot-Deduplizierung
+#     (`analytics.eingang_snapshot`, B2) — ein Re-Run über denselben Zeitraum
+#     erzeugt zwar (append-only, gewollt) einen NEUEN Lauf-Datensatz, aber
+#     KEINE doppelten Snapshot-/Detail-Zeilen.
+#   - `GET /berechnung/laeufe/{laufId}` ist reine Lese-Operation, KEIN
+#     `Idempotency-Key`.
+#
+# Fachlicher Kern: s. `src/backend/src/berechnung/berechnungslauf.service.ts`
+# und `docs/adr/ADR-0006-baseline-bereinigung.md` Teil B (B1/B2/B5/B12).
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Berechnungslauf-API
+  version: 0.2.0
+  summary: >
+    Witterungsbereinigte Baseline-Referenz je Endkunde/Energieträger/Monat
+    (VDI 3807, Verfahren `witterung_gtz_vdi3807`) — Nachweis-Artefakt für
+    das BAFA-Pilotprogramm Einsparzähler.
+  description: >
+    Eigener fachlicher Kontext `berechnung` (analog `measurement`/
+    `messwerte`), NICHT innerhalb `stammdaten` verschachtelt. Ein
+    Berechnungslauf ist append-only (`analytics.berechnungslauf`/
+    `laufergebnis`) — es gibt weder PATCH noch DELETE.
+  contact:
+    name: EDMS Studio
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Dev-Umgebung (Docker Compose, NestJS-Backend/BFF)
+
+tags:
+  - name: berechnungslauf
+    description: >
+      Witterungsbereinigte Monats-Referenz (`R_m`, B12.1) gegen den
+      gemessenen Ist-Verbrauch (`A_m`) — je Endkunde/Energieträger/Periode.
+
+security:
+  - oauth2: []
+
+paths:
+  /berechnung/laeufe:
+    post:
+      operationId: berechnungslaufAnlegen
+      tags: [berechnungslauf]
+      summary: Neuen Berechnungslauf starten (synchron)
+      description: >
+        ABAC-Aktion `create:berechnungslauf` (NEU). Rolle `betrieb`.
+        A10-Sperr-Check (`energy.endkunde.verarbeitungs_status`) läuft
+        ZUERST — ein gesperrter/gelöschter Endkunde liefert `409 Conflict`,
+        OHNE jeden Schreibzugriff (auch kein Audit-Event). Erfolgreiche und
+        fehlgeschlagene Läufe werden auditiert
+        (`berechnungslauf.bereinigung.angefordert`/`.abgeschlossen`/
+        `.fehlgeschlagen`/`.ersetzt`).
+
+        `endkundeId` UND `mvetId` sind BEIDE Pflicht (redundant, wie
+        `analytics.berechnungslauf` selbst) — der Server prüft, dass
+        `mvetId` tatsächlich zu `endkundeId` gehört (400 bei Abweichung).
+
+        v1-Einschränkungen (bitte im Review bestätigen, s. finale Antwort
+        des Arbeitspakets): `periodeVon`/`periodeBis` müssen Monatsanfänge
+        sein; `baseline_einheit` muss `kWh` sein (keine automatische
+        Brennwertumrechnung); `stationRef` ist ein expliziter, vom Aufrufer
+        gewählter Parameter (keine automatische Klimareferenz-Auflösung,
+        ADR-0006 O-B5 ist noch offen); `gtzNorm`/`baselineNormKwh` bleiben
+        `null`, sofern nicht explizit `gtzNormOverride` gesetzt wird (keine
+        automatische Normperioden-Auflösung).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BerechnungslaufAnlegen'
+      responses:
+        '201':
+          description: Berechnungslauf erfolgreich abgeschlossen und persistiert.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BerechnungslaufAntwort'
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /berechnung/laeufe/{laufId}/neuberechnung:
+    parameters:
+      - $ref: '#/components/parameters/LaufIdPath'
+    post:
+      operationId: berechnungslaufNeuBerechnen
+      tags: [berechnungslauf]
+      summary: Bestehenden Lauf mit unveraenderten Parametern neu rechnen (Korrektur)
+      description: >
+        ABAC-Aktion `create:berechnungslauf`. Rolle `betrieb`.
+
+        Der Einstieg in die nachtraegliche Korrektur (ADR-0007 B7/D7, "nie
+        stilles Ueberschreiben"): Der alte Lauf bleibt stehen, der neue
+        ersetzt ihn (`ersetztLaufId`), `ausloeser` ist
+        `nachlauf_korrektur`, und die Differenz wird bei der naechsten
+        Einreichung ausgewiesen.
+
+        Nimmt BEWUSST keine Rechenparameter entgegen. Messkonzept, Periode,
+        Grundlastanteil, Klimastation, GTZ_base und GTZ_norm werden vom
+        ersetzten Lauf uebernommen — wer korrigiert, soll nichts anderes
+        rechnen koennen als das Original. Geaendert hat sich nur die
+        Datenlage.
+
+        `409 Conflict`, wenn der Lauf bereits durch einen neueren ersetzt
+        wurde: Eine Korrektur gehoert an den juengsten Lauf, sonst haette
+        das Original zwei gleichrangige Nachfolger.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Korrekturlauf abgeschlossen und persistiert; ersetzt den angegebenen Lauf.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BerechnungslaufAntwort'
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /berechnung/laeufe/{laufId}:
+    parameters:
+      - $ref: '#/components/parameters/LaufIdPath'
+    get:
+      operationId: berechnungslaufLesen
+      tags: [berechnungslauf]
+      summary: Berechnungslauf + Monatsergebnisse lesen
+      description: >
+        ABAC-Aktion `read:berechnungslauf` (NEU). Rollen
+        `betrieb`/`compliance-auditor`. PII-frei (`endkundeId` ist
+        Pseudonym). Liefert AUSDRÜCKLICH KEINE Tages-Detail-Snapshots
+        (`eingang_messwert_tag`/`eingang_klima_tag` — Detail-Niveau,
+        `edms_analytics_detail_reader`, kein v1-Konsument dieser Route).
+      responses:
+        '200':
+          description: Berechnungslauf inkl. `laufergebnis`-Zeilen.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BerechnungslaufAntwort'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /berechnung/endkunden/{endkundeId}/laeufe:
+    parameters:
+      - $ref: '#/components/parameters/EndkundeIdPath'
+    get:
+      operationId: berechnungslaufListeLesen
+      tags: [berechnungslauf]
+      summary: Berechnungsläufe eines Endkunden auflisten (PII-frei, Cursor-paginiert)
+      description: >
+        ABAC-Aktion `read:berechnungslauf`. Rollen `betrieb`/
+        `compliance-auditor`. Liefert eine PII-freie Zusammenfassung je Lauf
+        (OHNE `laufergebnis`-Monatszeilen) — das Monats-Detail kommt über
+        `GET /berechnung/laeufe/{laufId}`. Cursor-basiert (`cursor` + `limit`,
+        api-contracts.md), niemals offset.
+      parameters:
+        - $ref: '#/components/parameters/CursorQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: Seite von Lauf-Zusammenfassungen.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BerechnungslaufListe'
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /berechnung/parametervorschlag:
+    get:
+      operationId: berechnungParametervorschlag
+      tags: [berechnungslauf]
+      summary: Lauf-Parameter aus dem Bestand herleiten
+      description: >
+        ABAC-Aktion `read:berechnungslauf`. Rollen `betrieb` und
+        `compliance-auditor` — rein lesend: Ein Auditor darf sehen, mit
+        welchen Werten zu rechnen wäre, ohne rechnen zu dürfen.
+
+        `POST /berechnung/laeufe` verlangt sechs Pflichtparameter, darunter
+        `grundlastAnteil` — den Anteil der Baseline, der NICHT der Witterung
+        folgt. Diese eine Zahl entscheidet über die Form der Monatskurve:
+        `referenzMonat()` teilt die Baseline in `g·B·(dM/dA)` und
+        `(1−g)·B·(GTZ_ist/GTZ_base)`. Wer `g` zu klein wählt, hängt zu viel an
+        den Gradtagzahlen — und die gehen im Sommer gegen null. Die Referenz
+        sackt dann ab, während der Ist-Verbrauch bleibt: rechnerischer
+        Mehrverbrauch, wo tatsächlich eingespart wurde.
+
+        **Die Herleitung:** `g` ist das Verhältnis des Sommerniveaus
+        (Juli/August — dann heizt niemand, der verbleibende Tagesverbrauch IST
+        die Grundlast) zum Jahresmittel, gebildet über die erfassten
+        Baseline-Perioden. Liegt der Sommer NICHT unter dem Jahresmittel,
+        folgt der Verbrauch der Heizwitterung überhaupt nicht (Strom in einem
+        Bürogebäude: Kühlung und Beleuchtung) — dann ist der Vorschlag `1`.
+
+        Der Vorschlag kommt mit seiner Grundlage zurück (Sommermittel,
+        Jahresmittel, Fenster, Tage), damit man ihm widersprechen kann. Ein
+        Vorschlag ohne nachvollziehbare Herleitung wäre nur eine besser
+        getarnte Vermutung.
+
+        Die Antwort trägt außerdem die Umstände, die einen Lauf ins Leere
+        laufen ließen: fehlende Baseline-Perioden (`gtzBaseErmittelbar`), eine
+        nicht verwertbare Baseline-Einheit, eine leere Systemgrenze (dann
+        greift der `endkunde_fallback` und zieht ALLE Zähler des Kunden
+        heran), gar keine Messdaten. Diese Dinge fielen sonst erst am Ergebnis
+        auf.
+      parameters:
+        - name: endkundeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: mvetId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: >
+            `energy.messkonzept_version_energietraeger.id`. Pflicht wie am
+            Lauf selbst: Der Vorschlag gilt für ein (Endkunde,
+            Energieträger)-Paar — ein Kunde mit Strom UND Wärme bekommt zwei
+            völlig verschiedene Grundlastanteile.
+      responses:
+        '200':
+          description: Vorschlag samt Herleitung.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BerechnungParametervorschlag' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: >
+        OIDC via Keycloak (ADR-0002, Realm `edms`). Bearer-Access-Token,
+        serverseitig gegen die Keycloak-JWKS validiert (JwtAuthGuard). AuthZ
+        (RBAC @Roles + ABAC-PDP) im PolicyInterceptor; Default = deny.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.local/realms/edms/protocol/openid-connect/auth
+          tokenUrl: https://auth.example.local/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    LaufIdPath:
+      name: laufId
+      in: path
+      required: true
+      description: Berechnungslauf-ID (`analytics.berechnungslauf.id`).
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >
+        Client-erzeugter Idempotenz-Schlüssel (UUID empfohlen). Präsenz/
+        Format geprüft — s. Datei-Kopf zum Stand der Replay-Deduplizierung.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+    EndkundeIdPath:
+      name: endkundeId
+      in: path
+      required: true
+      description: Endkunde-ID (`energy.endkunde.id`, Pseudonym-Surrogat).
+      schema: { type: string, format: uuid }
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: Opaker Cursor der Vorseite (`seite.naechsterCursor`), niemals offset.
+      schema: { type: string, maxLength: 512 }
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      description: Maximale Seitengröße (Default 50, max. 100).
+      schema: { type: integer, minimum: 1, maximum: 100 }
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe (Validierung fehlgeschlagen). PII-frei.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Kein/ungültiges/abgelaufenes Access-Token (AuthN, JwtAuthGuard).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: AuthZ-Ablehnung (RBAC/ABAC, PolicyInterceptor). PII-frei, strukturierter Grund.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NichtGefunden:
+      description: Ressource nicht gefunden (Endkunde, mvet, Berechnungslauf).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Konflikt:
+      description: >
+        A10-Sperre (Endkunde gesperrt/gelöscht, Art. 18 DSGVO) — kein neuer
+        Berechnungslauf zulässig.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unerwartet:
+      description: Unerwarteter Fehler. PII-/stacktrace-frei (DS-10).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: Fehlerobjekt nach RFC 9457 (application/problem+json).
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri, default: 'about:blank' }
+        title: { type: string }
+        status: { type: integer, minimum: 100, maximum: 599 }
+        detail:
+          type: string
+          description: Menschenlesbare, PII-freie Detailbeschreibung.
+        instance: { type: string, format: uri }
+
+    Energietraeger:
+      type: string
+      enum: [strom, waerme, kaelte, gas, oel, biomasse]
+
+    QualitaetsStufe:
+      type: string
+      enum: [belastbar, eingeschraenkt, nicht_ausweisbar]
+      description: B12.4 — Datenqualitäts-Schwelle je Monat (bzw. schlechteste Stufe der Periode am Lauf-Kopf).
+
+    Ausloeser:
+      type: string
+      enum: [manuell, job, nachlauf_korrektur]
+
+    BerechnungslaufParameter:
+      type: object
+      additionalProperties: false
+      description: >
+        Optionale Overrides der Verfahrensparameter — fehlt ein Feld, greift
+        der Kern-Default (`t_innen_c=20`, `t_heizgrenze_c=15`,
+        `tage_pro_jahr=365.25`, `tages_zeitzone='Europe/Berlin'`).
+      properties:
+        tInnenC: { type: number, minimum: -50, maximum: 50 }
+        tHeizgrenzeC: { type: number, minimum: -50, maximum: 50 }
+        tageProJahr: { type: number, minimum: 1, maximum: 366 }
+        tagesZeitzone: { type: string, maxLength: 64 }
+
+    BerechnungslaufAnlegen:
+      type: object
+      additionalProperties: false
+      required: [endkundeId, mvetId, periodeVon, periodeBis, grundlastAnteil, stationRef]
+      properties:
+        endkundeId: { type: string, format: uuid }
+        mvetId:
+          type: string
+          format: uuid
+          description: '`energy.messkonzept_version_energietraeger.id`.'
+        periodeVon:
+          type: string
+          format: date
+          description: Erster Kalendertag des ERSTEN Zielmonats (Monatsanfang).
+        periodeBis:
+          type: string
+          format: date
+          description: Erster Kalendertag NACH dem letzten Zielmonat (halboffen, Monatsanfang).
+        grundlastAnteil:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: >
+            g — witterungsunabhängiger Anteil (B12.1), expliziter Parameter.
+
+            **Wird beim Standard-/alternativen Messkonzept IGNORIERT** (V0076):
+            Dort ist g kein Eingabewert, sondern Ergebnis der Anpassung an die
+            vermessene Baseline-Periode. Der Lauf schreibt den angepassten Wert
+            in seine Antwort — ein eingesandtes g findet sich dann dort NICHT
+            wieder. Das Feld bleibt Pflicht, weil derselbe Endpoint beide
+            Messkonzepte bedient und der vereinfachte Weg ohne g nicht rechnen
+            kann.
+        stationRef:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Eingefrorene Klimastations-Referenz (D4, keine Laufzeit-Auflösung).
+        gtzBaseOverride:
+          type: number
+          minimum: 0
+          description: Expliziter GTZ_base-Override (Kd/a) — überspringt die Baseline-Perioden/Klima-Herleitung.
+        gtzNormOverride:
+          type: number
+          minimum: 0
+          description: Expliziter GTZ_norm-Override (Kd/a) — NUR für `baselineNormKwh` (Ausweis), geht NIE in `referenzKwh` ein.
+        ausloeser:
+          $ref: '#/components/schemas/Ausloeser'
+        ersetztLaufId:
+          type: string
+          format: uuid
+          description: Verweist auf einen abgelösten Vorgänger-Lauf desselben Endkunden/derselben mvet (F7b, Neuberechnung).
+        parameter:
+          $ref: '#/components/schemas/BerechnungslaufParameter'
+
+    Laufergebnis:
+      type: object
+      additionalProperties: false
+      required:
+        - monat
+        - referenzKwh
+        - istKwh
+        - gtzIst
+        - tageGesamt
+        - tageGemessen
+        - tageGeschaetzt
+        - tageErsatz
+        - tageFehlend
+        - abdeckungPct
+        - qualitaetsStufe
+      properties:
+        monat: { type: string, format: date, description: Monatserster (lokal). }
+        referenzKwh: { type: number, description: 'R_m — witterungsbereinigte Monats-Referenz.' }
+        istKwh: { type: number, description: 'A_m — gemessener Ist-Verbrauch.' }
+        gtzIst: { type: number, description: 'GTZ des Monats unter Ist-Wetter (Kd).' }
+        tageGesamt: { type: integer, minimum: 0 }
+        tageGemessen: { type: integer, minimum: 0 }
+        tageGeschaetzt: { type: integer, minimum: 0 }
+        tageErsatz: { type: integer, minimum: 0 }
+        tageFehlend: { type: integer, minimum: 0 }
+        abdeckungPct: { type: number, minimum: 0, maximum: 100 }
+        qualitaetsStufe:
+          $ref: '#/components/schemas/QualitaetsStufe'
+
+    BerechnungslaufAntwort:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - endkundeId
+        - energietraeger
+        - mvetId
+        - verfahrenCode
+        - verfahrenVersion
+        - periodeVon
+        - periodeBis
+        - baselineWertKwh
+        - grundlastAnteil
+        - gtzBase
+        - gtzNorm
+        - baselineNormKwh
+        - messkonzeptTyp
+        - modellguete
+        - qualitaetsStufeMin
+        - ausloeser
+        - ersetztLaufId
+        - ersetztDurchLaufId
+        - erstelltAt
+        - ergebnisse
+      properties:
+        id: { type: string, format: uuid }
+        endkundeId: { type: string, format: uuid, description: Pseudonym, KEINE Klartext-Stammdaten. }
+        energietraeger:
+          $ref: '#/components/schemas/Energietraeger'
+        mvetId: { type: string, format: uuid }
+        verfahrenCode: { type: string }
+        verfahrenVersion: { type: integer, minimum: 1 }
+        periodeVon: { type: string, format: date }
+        periodeBis: { type: string, format: date }
+        baselineWertKwh: { type: number, minimum: 0 }
+        grundlastAnteil: { type: number, minimum: 0, maximum: 1 }
+        gtzBase: { type: number, minimum: 0 }
+        gtzNorm: { type: [number, 'null'] }
+        baselineNormKwh: { type: [number, 'null'] }
+        messkonzeptTyp:
+          type: string
+          enum: [vereinfacht, standard, alternativ]
+          description: >
+            Messkonzept, mit dem DIESER Lauf gerechnet hat (Merkblatt Technik
+            v2.2 Kap. 2, V0076). `vereinfacht` = a0 und b1 aus erfasster
+            Baseline und Grundlast-Anteil GESETZT; `standard`/`alternativ` =
+            an die vermessene Baseline-Periode ANGEPASST. Eingefroren wie
+            `stationRef` — das Etikett am Messkonzept kann sich spaeter
+            aendern, der Lauf behaelt seinen Stand.
+        modellguete:
+          oneOf:
+            - $ref: '#/components/schemas/Modellguete'
+            - type: 'null'
+          description: >
+            Guete der Baseline-Anpassung. `null` beim vereinfachten
+            Messkonzept: dort wurde nichts angepasst, und eine Zahl waere die
+            Behauptung einer nie gemessenen Guete.
+        qualitaetsStufeMin:
+          $ref: '#/components/schemas/QualitaetsStufe'
+        ausloeser:
+          $ref: '#/components/schemas/Ausloeser'
+        ersetztLaufId: { type: [string, 'null'], format: uuid }
+        ersetztDurchLaufId:
+          type: [string, 'null']
+          format: uuid
+          description: >
+            Der Lauf, der DIESEN ersetzt — `null`, solange keiner existiert.
+            Gegenrichtung zu `ersetztLaufId`. Ohne sie liest jemand eine alte
+            Zahl, ohne zu erkennen, dass eine Korrektur sie abgeloest hat.
+        erstelltAt: { type: string, format: date-time }
+        ergebnisse:
+          type: array
+          items: { $ref: '#/components/schemas/Laufergebnis' }
+
+    Modellguete:
+      type: object
+      additionalProperties: false
+      required: [bestimmtheitsmass, cvRmsePct, nmbePct, punkte, baselineAbweichungPct]
+      description: >
+        Guete der Baseline-Anpassung beim Standard-/alternativen Messkonzept
+        (V0076). Vier Masse statt einem: R2 allein ist bei waermegefuehrten
+        Traegern schon durch den Sommer-Winter-Kontrast hoch, auch wenn das
+        Modell in den Uebergangsmonaten danebenliegt.
+      properties:
+        bestimmtheitsmass:
+          type: number
+          maximum: 1
+          description: >
+            R2, ZENTRIERT definiert (1 - SSE/SST um den Mittelwert). Fuer ein
+            Modell ohne Achsenabschnitt ist auch die unzentrierte Variante
+            gebraeuchlich — sie faellt systematisch hoeher aus. Darf negativ
+            sein: ein Modell, das schlechter trifft als der blosse Mittelwert,
+            ist eine Aussage, kein Fehler.
+        cvRmsePct:
+          type: number
+          minimum: 0
+          description: Variationskoeffizient des RMSE in Prozent des Monatsmittels — die typische relative Abweichung.
+        nmbePct:
+          type: number
+          description: >
+            Normalisierter mittlerer Bias in Prozent der Gesamtmenge. Dass er
+            nahe null liegt, ist KEINE Guete — kleinste Quadrate erzwingen es
+            fast. Aussagekraeftig waere erst eine Abweichung davon.
+        punkte:
+          type: integer
+          minimum: 1
+          description: n — Monatspunkte der Vermessung. Ohne n ist R2 nicht bewertbar.
+        baselineAbweichungPct:
+          type: [number, 'null']
+          description: >
+            Abstand der ANGEPASSTEN zur nach TB-02 ERFASSTEN Jahres-Baseline
+            in Prozent. Befund, kein Fehler: die erfasste Baseline bleibt der
+            Beleg, die angepasste das Modell. `null`, wenn keine erfasste
+            Baseline vorliegt.
+
+    SystemgrenzeQuelle:
+      type: string
+      enum: [mvet_system, endkunde_fallback]
+      description: >
+        Woher die Zähler-Menge stammt. `endkunde_fallback` heißt: Für diese
+        mvet ist KEINE Systemgrenze gepflegt, der Lauf griffe auf alle aktiven
+        Zähler des Endkunden mit passendem Energieträger zurück — bei mehreren
+        Messkonzepten desselben Kunden fließt dabei fremder Verbrauch ein.
+
+    GrundlastHerleitung:
+      type: object
+      additionalProperties: false
+      required:
+        [anteilVorschlag, sommerMittelKwhTag, jahresMittelKwhTag, sommerTage,
+         basisTage, basisVon, basisBis, basisHerkunft, witterungsgefuehrt]
+      description: Der Vorschlag für `g` samt der Rechnung, aus der er stammt.
+      properties:
+        anteilVorschlag:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Sommermittel ÷ Jahresmittel, gedeckelt auf 1.
+        sommerMittelKwhTag: { type: number, description: Mittlerer Tagesverbrauch im Juli/August. }
+        jahresMittelKwhTag: { type: number, description: Mittlerer Tagesverbrauch über das ganze Bezugsfenster. }
+        sommerTage: { type: integer, minimum: 1 }
+        basisTage: { type: integer, minimum: 1, description: Tage mit Messwerten im Bezugsfenster. }
+        basisVon: { type: string, format: date }
+        basisBis: { type: string, format: date, description: Letzter Tag MIT Werten (einschließlich). }
+        basisHerkunft:
+          type: string
+          enum: [baseline_periode, erste_messdaten]
+          description: >
+            `baseline_periode` = aus den erfassten Bezugszeiträumen gebildet
+            (der Regelweg). `erste_messdaten` = ersatzweise aus dem ersten
+            Jahr der vorhandenen Messreihe, weil keine Periode erfasst ist —
+            das muss nicht das Baselinejahr sein und ist entsprechend
+            schwächer.
+        witterungsgefuehrt:
+          type: boolean
+          description: >
+            `false`, wenn der Sommerverbrauch NICHT unter dem Jahresmittel
+            liegt. Dann folgt der Verbrauch der Heizwitterung nicht, und der
+            Vorschlag ist `1`.
+
+    BerechnungParametervorschlag:
+      type: object
+      additionalProperties: false
+      required:
+        [endkundeId, mvetId, energietraeger, baselineWertKwh, baselineEinheit,
+         baselineEinheitVerwertbar, systemgrenzeQuelle, zaehlerAnzahl,
+         baselinePeriodenAnzahl, gtzBaseErmittelbar, grundlast,
+         stationRefVorschlaege, stationRefHerkunft, datenVon, datenBis,
+         periodeVonVorschlag, periodeBisVorschlag]
+      properties:
+        endkundeId: { type: string, format: uuid }
+        mvetId: { type: string, format: uuid }
+        energietraeger: { type: string }
+        baselineWertKwh: { type: [number, 'null'] }
+        baselineEinheit: { type: [string, 'null'] }
+        baselineEinheitVerwertbar:
+          type: boolean
+          description: >
+            `false`, wenn die Einheit gesetzt und nicht `kWh` ist — der Lauf
+            lehnt sie dann fail-closed ab (`BASELINE_EINHEIT_UNGUELTIG`, keine
+            automatische Brennwertumrechnung).
+        systemgrenzeQuelle: { $ref: '#/components/schemas/SystemgrenzeQuelle' }
+        zaehlerAnzahl: { type: integer, minimum: 0, description: Zähler, die der Lauf heranzöge. }
+        baselinePeriodenAnzahl: { type: integer, minimum: 0 }
+        gtzBaseErmittelbar:
+          type: boolean
+          description: >
+            `false`, wenn keine Baseline-Periode erfasst ist. Der Lauf bricht
+            dann mit `GTZ_BASE_NICHT_ERMITTELBAR` ab, sofern kein
+            `gtzBaseOverride` gesetzt ist und `grundlastAnteil` unter 1 liegt.
+        grundlast:
+          oneOf:
+            - $ref: '#/components/schemas/GrundlastHerleitung'
+            - type: 'null'
+          description: '`null`, wenn im Bezugsfenster keine Messdaten oder keine Sommertage liegen.'
+        stationRefHerkunft:
+          type: string
+          enum: [standort, fruehere_laeufe, keine]
+          description: >
+            Woher die Vorschläge stammen. `standort` =
+            `energy.standort.klimareferenz` der Systeme dieses Messkonzepts —
+            die fachlich richtige Quelle, die Station gehört zum Objekt.
+            `fruehere_laeufe` = nur aus dem, was bei diesem Kunden schon
+            gerechnet wurde; das wiederholt zuverlässig auch einen Fehler,
+            falls einer drinsteckt (ADR-0006 C10.1: eine Station 220 km neben
+            dem Objekt, jahrelang unbemerkt). `keine` = nichts hinterlegt.
+        stationRefVorschlaege:
+          type: array
+          items: { type: string }
+          description: >
+            Klimastations-Kennungen für dieses Messkonzept: zuerst die am
+            Standort hinterlegten, danach die für diesen Endkunden schon
+            einmal verwendeten (neueste zuerst, höchstens zehn). `stationRef`
+            ist ein frei gewählter String ohne Auflösung (ADR-0006 O-B5 ist
+            offen); ein leeres Textfeld wäre die nächste Ratestelle. Die Liste
+            ist ein Vorschlag, kein Katalog — ein neuer Kunde hat keine.
+        datenVon: { type: [string, 'null'], format: date }
+        datenBis: { type: [string, 'null'], format: date }
+        periodeVonVorschlag:
+          type: [string, 'null']
+          format: date
+          description: Monatserster des ersten Monats mit Daten.
+        periodeBisVorschlag:
+          type: [string, 'null']
+          format: date
+          description: >
+            EXKLUSIV, Monatserster. Ein angeschnittener letzter Monat fällt
+            heraus — er zählt jeden fehlenden Tag gegen seine Abdeckung und
+            wäre nicht belastbar.
+
+    BerechnungslaufListItem:
+      type: object
+      additionalProperties: false
+      description: >
+        PII-freie Lauf-Zusammenfassung für die Betriebs-UI-Liste (OHNE
+        `laufergebnis`-Monatszeilen, OHNE Snapshot-/Rohdaten-Hashes).
+      required:
+        - id
+        - energietraeger
+        - verfahrenCode
+        - verfahrenVersion
+        - periodeVon
+        - periodeBis
+        - qualitaetsStufeMin
+        - ausloeser
+        - ersetztLaufId
+        - erstelltAt
+      properties:
+        id: { type: string, format: uuid }
+        energietraeger: { $ref: '#/components/schemas/Energietraeger' }
+        verfahrenCode: { type: string }
+        verfahrenVersion: { type: integer, minimum: 1 }
+        periodeVon: { type: string, format: date }
+        periodeBis: { type: string, format: date }
+        qualitaetsStufeMin: { $ref: '#/components/schemas/QualitaetsStufe' }
+        ausloeser: { $ref: '#/components/schemas/Ausloeser' }
+        ersetztLaufId: { type: [string, 'null'], format: uuid }
+        erstelltAt: { type: string, format: date-time }
+
+    SeitenInfo:
+      type: object
+      additionalProperties: false
+      required: [naechsterCursor, limit]
+      properties:
+        naechsterCursor:
+          type: [string, 'null']
+          description: Cursor der nächsten Seite; `null` = letzte Seite.
+        limit: { type: integer, minimum: 1, maximum: 100 }
+
+    BerechnungslaufListe:
+      type: object
+      additionalProperties: false
+      required: [daten, seite]
+      properties:
+        daten:
+          type: array
+          items: { $ref: '#/components/schemas/BerechnungslaufListItem' }
+        seite: { $ref: '#/components/schemas/SeitenInfo' }

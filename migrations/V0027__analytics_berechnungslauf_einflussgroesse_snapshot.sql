@@ -1,0 +1,167 @@
+-- V0027__analytics_berechnungslauf_einflussgroesse_snapshot.sql
+--
+-- Befund (Arbeitsauftrag database-lead, Phase-4-Verifikation ADR-0007):
+-- ADR-0006 D7/A5 (Teil B, B7 Zeile 302) löst den DE-03/A5-Konflikt bewusst
+-- so, dass Einflussgrößen als DRITTE, pseudonyme Snapshot-Art in den
+-- Berechnungslauf eingefroren werden. Die Struktur dafür existiert bereits
+-- vollständig seit V0019: `analytics.eingang_snapshot.art` erlaubt
+-- ausdrücklich `'einflussgroesse'`, `analytics.eingang_einflussgroesse` ist
+-- exakt nach A5 gebaut (system_id/groesse_code/wert_num/wert_code/
+-- gueltig_ab_monat/gueltig_bis_monat, bewusst OHNE Betroffenen-/Quellen-/
+-- Rechtsgrundlage-/Anlass-Felder). Was FEHLT: `analytics.berechnungslauf`
+-- hat keine Spalte, die auf einen solchen Snapshot zeigt (nur
+-- `messwert_snapshot_id`/`klima_snapshot_id`), und es gibt NULL
+-- Schreibpfade auf `eingang_einflussgroesse` — verifiziert gegen
+-- `src/backend/src/berechnung/berechnungslauf.service.ts`: die Methode
+-- erzeugt ausschließlich einen Messwert- und einen Klima-Snapshot, an
+-- keiner Stelle im Modul `berechnung` taucht `eingang_einflussgroesse`
+-- überhaupt auf. Folge: DE-03-Kategorie 3 (Einflussgrößen im BAFA-Export,
+-- ADR-0007 A15: "klassiert exportieren") ist strukturell leer — die
+-- D7/A5-Lösung wurde nie zu Ende gebaut.
+--
+-- Diese Migration schließt AUSSCHLIESSLICH die Schema-Lücke (die
+-- FK-Spalte + ihre Semantik). Der Schreibpfad (Erweiterung von
+-- `BerechnungslaufService.starten()` um einen dritten Snapshot, analog dem
+-- bestehenden Messwert-/Klima-Zuschnitt) ist NICHT Teil dieser Migration —
+-- ausdrücklich Anwendungs-/`berechnung`-Modul-Scope (backend-lead/
+-- baseline-engineer), s. "Offene Punkte" am Dateiende.
+--
+-- NUR ENTWURF (Arbeitsauftrag): kein Apply gegen die Dev-DB (Port 5437),
+-- kein Commit — ausschließlich gegen einen Wegwerf-Testcontainer
+-- verifiziert (timescale/timescaledb:2.15.3-pg16-oss).
+--
+-- =====================================================================
+-- Warum NULLABLE — bewusste Abweichung vom NOT-NULL-Muster von
+-- messwert_snapshot_id/klima_snapshot_id
+-- =====================================================================
+-- Beide Bestandsspalten sind NOT NULL, weil es für sie IMMER genau einen
+-- Snapshot gibt (jeder Lauf braucht Messwerte UND Klimadaten, ADR-0006
+-- B1/B9). Für Einflussgrößen gilt das nicht zwingend — ADR-0006 Teil A F5
+-- hält ausdrücklich fest, dass sie in v1 "Nachweis-Beigabe, keine
+-- Rechengröße" sind (keine Regression). Es gibt daher ZWEI, per DB-Wert
+-- NICHT unterscheidbare NULL-Fälle:
+--   (1) "Lauf vor V0027" — jeder Bestandslauf (V0019–V0026) hat zwingend
+--       NULL, weil die Spalte zum Erstellungszeitpunkt des Laufs nicht
+--       existierte.
+--   (2) "keine Einflussgrößen im Scope" — ein Lauf NACH Einbau des
+--       Schreibpfads, dessen System/Zeitraum keine `einfluss.intervall`-
+--       Zeilen hat (z. B. noch keine TB-03-Erfassung durch das
+--       Betriebs-Team für dieses System).
+-- Diese Migration kann (1)/(2) NICHT per CHECK unterscheiden — das wäre
+-- eine Zeitpunkt-, keine Wert-Bedingung, und zum Migrationszeitpunkt ist
+-- der künftige Schreibpfad-Zuschnitt noch nicht entschieden.
+--
+-- EMPFEHLUNG (App-Scope, hier NICHT erzwungen, nur benannt): sobald der
+-- Schreibpfad existiert, sollte er IMMER einen Snapshot erzeugen — auch
+-- einen LEEREN (`eingang_snapshot.zeilen_anzahl = 0`, von V0019s
+-- `ck_eingang_snapshot_zeilen_anzahl CHECK (zeilen_anzahl >= 0)` bereits
+-- gedeckt; exaktes Vorbild: `eingang_messwert_tag`/`eingang_klima_tag`
+-- werden ebenfalls unabhängig davon erzeugt, ob überhaupt Zeilen gefunden
+-- wurden). Damit würde Fall (2) praktisch verschwinden — jeder NEUE Lauf
+-- bekäme immer einen (ggf. leeren) Einflussgrößen-Snapshot, und
+-- `einflussgroesse_snapshot_id IS NULL` bliebe langfristig ausschließlich
+-- Fall (1) vorbehalten. Die verbleibende Unterscheidung "vor/nach
+-- Roll-out des Schreibpfads" braucht dann KEIN eigenes DB-Feld:
+-- `erstellt_at` (bereits vorhanden) und `code_revision` (Git-SHA,
+-- forensischer Versions-Anker, ADR-0006 D3, bereits vorhanden) beantworten
+-- "mit welchem App-Stand wurde dieser Lauf erzeugt" schon heute — exakt
+-- der bereits etablierte Zweck von `code_revision`. Ob der Export
+-- (`nachweis`-Modul) diese Fallunterscheidung überhaupt braucht, hängt
+-- davon ab, ob der künftige Schreibpfad "immer erzeugen" wählt — eine
+-- Entscheidung, die diese Migration ausdrücklich NICHT trifft.
+--
+-- =====================================================================
+-- rohdaten_hash / Snapshot-Identität (ADR-0006 D7, wörtlich: Einfluss-
+-- größen "gehen trotzdem in rohdaten_hash und Snapshot-Identität ein") —
+-- BEFUND, NICHT behoben (Arbeitsauftrag: "ändere den Hash-Mechanismus
+-- NICHT selbst, das wäre ein Bruch bestehender Läufe")
+-- =====================================================================
+-- Snapshot-Identität: strukturell ERFÜLLT, sobald ein Snapshot existiert.
+-- `eingang_snapshot.inhalt_hash` + `UNIQUE (endkunde_id, art, inhalt_hash)`
+-- (V0019) gelten unverändert für `art = 'einflussgroesse'` — identisches
+-- Content-Addressing/Dedup wie bei den beiden anderen Arten. Hierzu ist
+-- KEINE Schema-Nacharbeit nötig, sobald ein Schreibpfad existiert.
+--
+-- rohdaten_hash: NICHT erfüllt — unabhängig von dieser Migration, und
+-- durch sie auch nicht behebbar. Verifiziert im Code
+-- (`src/backend/src/berechnung/berechnungslauf.service.ts`):
+--   `rohdatenHash = sha256Canonical([messwertHash.toString('hex'),
+--                                    klimaHash.toString('hex')])`
+-- — ZWEI Komponenten, KEINE dritte für Einflussgrößen. ADR-0006 D7s
+-- Anspruch ("gehen ... ein") ist damit HEUTE FALSCH, und zwar unabhängig
+-- vom Fehlen dieser Spalte: der Fehler liegt in der Anwendungs-Hash-Formel
+-- (`berechnungslauf.service.ts`), nicht im Schema — eine reine
+-- Schema-Migration kann eine App-seitig aus zwei Aufrufen zusammengesetzte
+-- `bytea`-Formel nicht um eine dritte Komponente erweitern. Diese Spalte
+-- behebt das NICHT und soll es auch nicht verdecken:
+-- `einflussgroesse_snapshot_id` kann künftig befüllt sein, OHNE dass
+-- `rohdaten_hash` davon je etwas weiß.
+--
+-- Hinweis für einen künftigen Fix (hier NICHT entschieden, nur benannt):
+-- der Wechsel von einer Zwei- auf eine (bedingte) Drei-Komponenten-Formel
+-- ändert den `rohdaten_hash`-WERT nur für NEUE Läufe ab dem
+-- Umstellungszeitpunkt, OHNE die Gültigkeit BESTEHENDER Läufe zu berühren
+-- — `rohdaten_hash` ist ein Siegel ÜBER einen einzelnen, bereits
+-- abgeschlossenen Lauf, kein laufübergreifender Dedup-Schlüssel wie
+-- `eingang_snapshot.inhalt_hash`. Ein Formel-Wechsel ist damit fachlich
+-- unkritisch, muss aber dokumentiert sein (analog zur Versionierung in
+-- `analytics.verfahren_version`, D3), damit ein künftiger Prüfer weiß,
+-- welche Formel-Version ein gegebener `rohdaten_hash`-Wert benutzt. Diese
+-- Migration trifft diese Entscheidung NICHT.
+--
+-- =====================================================================
+-- Warum KEIN eigener Index (Konsistenz mit den beiden Bestandsspalten)
+-- =====================================================================
+-- Weder `messwert_snapshot_id` noch `klima_snapshot_id` tragen einen
+-- eigenen Index (V0019) — der einzige heute gebrauchte Zugriffspfad ist
+-- "ein Lauf, alle Snapshot-IDs mit", nie "alle Läufe zu Snapshot X". Ein
+-- Index ohne belegten Zugriffspfad wäre spekulativ
+-- (.claude/rules/database-migrations.md: "Indizes mit Begründung — keine
+-- spekulativen Indizes"). Kandidat für die Zukunft (NICHT hier gebaut):
+-- ein künftiger Retention-Job, der "verwaiste Snapshots" identifiziert
+-- (V0019, Kommentar "D-CASCADE"), müsste dann alle DREI Spalten in seinem
+-- Anti-Join berücksichtigen — zum Zeitpunkt jenes Jobs neu zu bewerten.
+--
+-- =====================================================================
+-- Warum KEIN art-Check (Konsistenz mit den beiden Bestandsspalten)
+-- =====================================================================
+-- Die FK verlangt nur irgendeine Zeile in `analytics.eingang_snapshot`,
+-- NICHT dass deren `art = 'einflussgroesse'` ist — identisch zum
+-- bestehenden Zuschnitt von `messwert_snapshot_id`/`klima_snapshot_id`
+-- (die ebenfalls keine `art`-Prüfung tragen). Eine strengere,
+-- zusammengesetzte FK-Konstruktion (`FOREIGN KEY (einflussgroesse_
+-- snapshot_id, 'einflussgroesse') REFERENCES eingang_snapshot(id, art)`,
+-- analog dem Mandantentreue-Muster aus ADR-0010/V0017) wäre technisch
+-- möglich, würde aber NUR für die neue Spalte gebaut — eine punktuelle
+-- Härtung, die für die beiden Bestandsspalten (append-only, nicht mehr
+-- änderbar) nicht nachgezogen werden könnte und damit eine neue
+-- Inkonsistenz einführen würde, ohne im Auftrag verlangt zu sein. Bleibt
+-- App-Invariante (der künftige Schreibpfad ist der einzige Ort, der
+-- `einflussgroesse_snapshot_id` befüllt, und wird dort korrekt gesetzt).
+--
+-- =====================================================================
+-- Reihenfolge dieser Datei
+-- =====================================================================
+-- ALTER TABLE (Spalte + FK) -> COMMENT.
+
+ALTER TABLE analytics.berechnungslauf
+    ADD COLUMN einflussgroesse_snapshot_id uuid REFERENCES analytics.eingang_snapshot(id);
+
+COMMENT ON COLUMN analytics.berechnungslauf.einflussgroesse_snapshot_id IS
+  'Dritte Snapshot-Art (ADR-0006 D7/A5/B7): FK auf analytics.eingang_snapshot mit art=''einflussgroesse'' — NICHT DB-seitig auf diesen art-Wert geprüft (Konsistenz mit messwert_snapshot_id/klima_snapshot_id, die ebenfalls keinen art-Check tragen; App-Invariante, s. Migrations-Kopf "Warum KEIN art-Check"). NULLABLE mit ZWEI per DB-Wert nicht unterscheidbaren Bedeutungen: (1) Lauf vor V0027 (Spalte existierte noch nicht), (2) Lauf nach V0027 ohne Einflussgrößen im Scope. Empfehlung (App-Scope, hier nicht erzwungen): der künftige Schreibpfad sollte IMMER einen — ggf. leeren — Snapshot erzeugen, wodurch Fall (2) praktisch entfällt und NULL langfristig ausschließlich (1) bedeutet, unterscheidbar über erstellt_at/code_revision. rohdaten_hash bezieht diese Spalte HEUTE NICHT ein (Befund, Migrations-Kopf) — Abweichung von ADR-0006 D7, durch diese Migration NICHT behoben.';
+
+-- =====================================================================
+-- Offene Punkte (NICHT Teil dieser Migration)
+-- =====================================================================
+-- (a) Schreibpfad: BerechnungslaufService.starten() muss einen dritten
+--     Snapshot (art='einflussgroesse') aus einfluss.intervall bauen und
+--     einflussgroesse_snapshot_id setzen — Analogie zum bestehenden
+--     Messwert-/Klima-Zuschnitt, inkl. der Content-Addressing-Logik
+--     (Dedup über inhalt_hash). Backend-lead/baseline-engineer-Scope.
+-- (b) rohdaten_hash-Formel: ob/wie eine dritte Komponente ergänzt wird,
+--     s. Migrations-Kopf — technical-director/database-lead-Entscheidung,
+--     NICHT rückwirkend auf bestehende Läufe anzuwenden.
+-- (c) nachweis-Modul (DE-03-Kategorie 3, ADR-0007 A15 "klassiert
+--     exportieren"): sobald (a) existiert, braucht der Export einen
+--     Lesepfad auf eingang_einflussgroesse über diese neue Spalte —
+--     bafa-export-engineer-Scope.

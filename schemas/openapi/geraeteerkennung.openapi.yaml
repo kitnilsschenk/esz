@@ -1,0 +1,561 @@
+# EDMS Geräteerkennungs-API (TB-05) — OpenAPI-Contract
+#
+# Status: proposed. Beschreibt, was gebaut ist, nicht was freigegeben ist.
+#
+# Grundlage ist die Förderauflage TB-05 ([Q3] Technisches Merkblatt v2.2,
+# Kap. 5), wörtlich:
+#
+#   „Das Messsystem muss in der Lage sein, einen gewissen Anteil des
+#    Gesamtenergieverbrauchs des jeweiligen Energieträgers bei dem
+#    entsprechenden Endkunden bestimmten Geräte- oder Anlagengruppen
+#    zuzuordnen."
+#
+#   Projektjahr 1: 20 %  ·  2: 25 %  ·  3: 30 %  ·  4: 35 %  ·  5: 40 %
+#   „Die Erkennungsraten sind nicht kumulativ."
+#
+# WAS DIESE API IST
+#   Die Betriebssicht: Gruppen anlegen, Messkanäle zuordnen, Zuordnungen
+#   beenden, die Entbehrlichkeit vermerken — und die Quote abrufen.
+#
+# DIE QUOTE IST EINE RECHNUNG, KEINE WERTUNG
+#   `quotePct` sagt, welcher Anteil zugeordnet IST. Ob die Auflage erfüllt
+#   ist, entscheidet sie nicht: Die Entbehrlichkeits-Feststellung aus Kap. 5
+#   („Systeme, die nur ein Gerät umfassen") steht DANEBEN und verändert die
+#   Zahl nicht. Eine Quote, die sich durch ein Häkchen von 12 % auf „erfüllt"
+#   hebt, wäre genau die Zahl, der niemand mehr trauen kann.
+#
+# BEKANNTE GRENZE DES MODELLS
+#   Eine Zuordnung weist EINEN Messkanal EINER Gruppe zu. Die
+#   Algorithmen-Erkennung, die einen Kanal auf MEHRERE Gruppen aufteilt, ist
+#   damit noch nicht abbildbar — sie braucht eine Summenprüfung über alle
+#   Anteile eines Kanals und damit eine eigene Entscheidung. Gebaut ist, was
+#   das Merkblatt zuerst nennt und ohne Forschung trägt: Direktmessung und
+#   Vorschaltgerät.
+#
+# Regel-Konformität (.claude/rules/api-contracts.md):
+#   - OpenAPI 3.1; info.title/version (SemVer)/servers[].url gesetzt.
+#   - Security-Scheme oauth2 als GLOBALER Default — kein öffentlicher Endpoint.
+#   - Fehler-Shape: application/problem+json (RFC 9457).
+#   - Alle POST-Routen tragen `Idempotency-Key` (Pflicht).
+
+openapi: 3.1.0
+
+info:
+  title: EDMS Geräteerkennungs-API
+  version: 0.1.0
+  description: >
+    Identifikation von Geräte- und Anlagengruppen nach TB-05 — Zuordnung,
+    Entbehrlichkeit und Zuordnungsquote je Förderjahr.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Lokale Entwicklung
+
+security:
+  - oauth2: []
+
+tags:
+  - name: geraeteerkennung
+    description: Geräte- und Anlagengruppen (TB-05)
+
+paths:
+  /geraeteerkennung/gruppen:
+    get:
+      operationId: geraeteerkennungGruppenLesen
+      tags: [geraeteerkennung]
+      summary: Geräte-/Anlagengruppen eines Endkunden
+      description: ABAC-Aktion `read:geraeteerkennung`. Rollen `betrieb` und `compliance-auditor`.
+      parameters:
+        - name: endkundeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Die Gruppen, alphabetisch.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Geraetegruppe' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: geraeteerkennungGruppeAnlegen
+      tags: [geraeteerkennung]
+      summary: Gruppe anlegen
+      description: >
+        ABAC-Aktion `create:geraetegruppe`. Rolle `betrieb`.
+
+        Die Bezeichnung ist das, was der Endkunde später in seiner monatlichen
+        Information liest ([Q3] Kap. 6: „getrennt nach jeweiligen Gruppen") —
+        sie sollte allgemeinverständlich sein, „Beleuchtung" statt „Abgang 3".
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GeraetegruppeAnlegen' }
+      responses:
+        '201':
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Geraetegruppe' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /geraeteerkennung/zuordnungen:
+    get:
+      operationId: geraeteerkennungZuordnungenLesen
+      tags: [geraeteerkennung]
+      summary: Zuordnungen eines Endkunden — einschliesslich beendeter
+      description: >
+        ABAC-Aktion `read:geraeteerkennung`. Rollen `betrieb` und
+        `compliance-auditor`.
+
+        Beendete Zuordnungen bleiben in der Liste. Sie sind der Nachweis der
+        Zeit, in der die Zuordnung galt — und damit der Quote der
+        Vergangenheit.
+      parameters:
+        - name: endkundeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Zuordnungen, je Gruppe neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Zuordnung' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+    post:
+      operationId: geraeteerkennungZuordnungAnlegen
+      tags: [geraeteerkennung]
+      summary: Messkanal einer Gruppe zuordnen
+      description: >
+        ABAC-Aktion `create:geraetegruppe_zuordnung`. Rolle `betrieb`.
+        **Der Vorgang HEBT die Nachweisquote** und ist deshalb
+        pflichtprotokolliert.
+
+        `methode` und `genauigkeitPct` verlangt Kap. 5 ausdrücklich. Die
+        Genauigkeit ist Pflicht, sobald **nicht** direkt gemessen wird: Bei
+        einer Direktmessung ist sie die des Messgeräts und steht am Zähler,
+        bei einer Schätzung ist sie eine eigene Aussage.
+
+        `imGesamtverbrauchEnthalten` ist die Angabe, ohne die die Quote nicht
+        rechenbar wäre: Misst der Kanal eine **Untermessung** (sein Verbrauch
+        steckt schon in der Hauptmessung) oder einen eigenen Zähler daneben?
+        Summierte man beides, zählte man denselben Strom zweimal.
+
+        Ein Kanal kann zu einem Zeitpunkt nur zu **einer** Gruppe gehören —
+        sonst ginge sein Verbrauch doppelt in den Zähler der Quote (**409**).
+
+        Audit `geraetegruppe.zuordnung.angelegt` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ZuordnungAnlegen' }
+      responses:
+        '201':
+          description: Zugeordnet.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zuordnung' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Konflikt' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /geraeteerkennung/zuordnungen/beenden:
+    post:
+      operationId: geraeteerkennungZuordnungBeenden
+      tags: [geraeteerkennung]
+      summary: Zuordnung beenden
+      description: >
+        ABAC-Aktion `beenden:geraetegruppe_zuordnung`. Rolle `betrieb`.
+        **Der Vorgang SENKT die Nachweisquote** — von den beiden Richtungen
+        ist das die, die später erklärt werden muss. Der `grund` ist deshalb
+        Pflicht.
+
+        `POST .../beenden` statt `DELETE`: Es verschwindet nichts. Die Zeile
+        bleibt mit ihrem Grund stehen, sonst wäre auch der Nachweis der Zeit
+        weg, in der die Zuordnung galt.
+
+        Eine bereits beendete Zuordnung wird nicht erneut beendet (**404**) —
+        sonst verschöbe sich der Zeitpunkt, ab dem ihr Verbrauch nicht mehr
+        zählt.
+
+        Audit `geraetegruppe.zuordnung.beendet` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ZuordnungBeenden' }
+      responses:
+        '200':
+          description: Beendet; ausgegeben wird die Zuordnung mit gesetztem `gueltigBis`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zuordnung' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /geraeteerkennung/quote:
+    get:
+      operationId: geraeteerkennungQuoteLesen
+      tags: [geraeteerkennung]
+      summary: Zuordnungsquote für ein Förderjahr
+      description: >
+        ABAC-Aktion `read:geraeteerkennung`. Rollen `betrieb` und
+        `compliance-auditor` — die Quote ist der Nachweis, dass TB-05 erfüllt
+        wird, und gehört damit zur Aufgabe des Auditors.
+
+        Gerechnet wird auf `measurement.messwert_tag`, dem Tagesbestand, auf
+        dem auch der BAFA-Nachweis rechnet. **Das hat eine Voraussetzung:** Die
+        Verdichtung muss für den Zeitraum gelaufen sein. Liegen keine
+        Tageswerte vor, ist `quotePct` **`null`** und `ohneTageswerte` `true` —
+        die Quote ist dann nicht „0 %", sondern unbekannt. Eine 0 wäre hier
+        die gefährlichere Antwort: Sie sieht aus wie ein Ergebnis.
+
+        Die Zuordnung wird **tagesgenau** gewertet: Eine Zuordnung, die Mitte
+        des Jahres beginnt, bringt nur die Tage ab ihrem Beginn in den Zähler.
+        Würde der ganze Zeitraum gezählt, sobald sie ihn irgendwo überlappt,
+        wäre die Quote systematisch zu hoch — in genau der Richtung, in der
+        sie günstig aussieht.
+      parameters:
+        - name: endkundeId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: energietraeger
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[a-z][a-z0-9_]{1,31}$' }
+        - name: foerderjahrId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+          description: Die Sollquote hängt am Projektjahr — es steht im Förderjahr.
+      responses:
+        '200':
+          description: Die Quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ZuordnungsQuote' }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+  /geraeteerkennung/systeme/{systemId}/entbehrlich:
+    parameters:
+      - name: systemId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: geraeteerkennungEntbehrlichLesen
+      tags: [geraeteerkennung]
+      summary: Stand der Entbehrlichkeits-Feststellung eines Systems
+      description: >
+        ABAC-Aktion `read:geraeteerkennung`. Rollen `betrieb`,
+        `compliance-auditor`.
+
+        Ohne diese Route waere das Vermerken schreib-only: Die Betriebssicht
+        koennte ein Haekchen setzen, aber nicht zeigen, ob schon eines gesetzt
+        IST — und der naechste Bearbeiter uebersaehe eine bestehende
+        Feststellung samt ihrer Begruendung.
+      responses:
+        '200':
+          description: Aktueller Stand.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Entbehrlichkeit' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+    post:
+      operationId: geraeteerkennungEntbehrlichVermerken
+      tags: [geraeteerkennung]
+      summary: Geräteerkennung für dieses System als nicht sinnvoll vermerken
+      description: >
+        ABAC-Aktion `vermerken:geraeteerkennung_entbehrlich`. Rolle `betrieb`.
+
+        [Q3] Kap. 5: „In Fällen, in denen eine Geräteerkennung nicht sinnvoll
+        ist, beispielsweise bei Systemen, die nur ein Gerät umfassen, gelten
+        die für Geräteerkennung genannten Anforderungen pauschal als erfüllt."
+
+        **Der Vorgang mit dem grössten Missbrauchspotenzial dieses Moduls** —
+        ein Häkchen, das eine Förderauflage für ein System als erfüllt
+        erklärt. Deshalb eine eigene ABAC-Aktion, ein Pflicht-Audit-Ereignis
+        und eine **Pflicht-Begründung**: „Pauschal erfüllt" ohne Begründung ist
+        gegenüber der Bewilligungsbehörde keine Feststellung, sondern eine
+        Behauptung.
+
+        Der Vermerk verändert die berechnete Quote **nicht**. Er wird ihr
+        danebengestellt; die Würdigung trifft ein Mensch.
+
+        Audit `system.geraeteerkennung.entbehrlich_vermerkt` (Pflichtereignis).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EntbehrlichVermerken' }
+      responses:
+        '204': { description: Vermerkt. }
+        '400': { $ref: '#/components/responses/UngueltigeEingabe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NichtGefunden' }
+        default: { $ref: '#/components/responses/Unerwartet' }
+
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OIDC (Keycloak) — Bearer-Token aus dem BFF.
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:8080/realms/edms/protocol/openid-connect/auth
+          tokenUrl: http://localhost:8080/realms/edms/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+      description: Pflicht auf allen schreibenden Routen (.claude/rules/api-contracts.md).
+
+  schemas:
+    Erkennungsmethode:
+      type: string
+      enum: [direktmessung, algorithmus, vorschaltgeraet, sonstige]
+      description: >
+        [Q3] Kap. 5, wörtlich: „ob es sich um eine Direktmessung, eine
+        Algorithmen-Erkennung, ein Vorschaltgerät oder eine sonstige
+        Erhebungsmethode handelt". Eine gemessene Zuordnung ist etwas anderes
+        als eine geschätzte — und der Unterschied ist genau das, was die
+        Bewilligungsbehörde wissen will.
+
+    Geraetegruppe:
+      type: object
+      additionalProperties: false
+      required: [id, endkundeId, bezeichnung, beschreibung]
+      properties:
+        id: { type: string, format: uuid }
+        endkundeId: { type: string, format: uuid }
+        bezeichnung: { type: string }
+        beschreibung: { type: [string, 'null'] }
+
+    GeraetegruppeAnlegen:
+      type: object
+      additionalProperties: false
+      required: [endkundeId, bezeichnung]
+      properties:
+        endkundeId: { type: string, format: uuid }
+        bezeichnung: { type: string, minLength: 2, maxLength: 120 }
+        beschreibung: { type: string, maxLength: 500 }
+
+    Zuordnung:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, geraetegruppeBezeichnung, messkanalId, methode, genauigkeitPct, anteilProzent, imGesamtverbrauchEnthalten, gueltigVon, gueltigBis, beendetGrund, wirksam]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        geraetegruppeBezeichnung: { type: string }
+        messkanalId: { type: string, format: uuid }
+        methode: { $ref: '#/components/schemas/Erkennungsmethode' }
+        genauigkeitPct:
+          type: [number, 'null']
+          description: Erwartete Genauigkeit. `null` nur bei Direktmessung — dort ist sie die des Messgeräts.
+        anteilProzent:
+          type: number
+          description: Anteil des Kanalverbrauchs, der dieser Gruppe zuzurechnen ist. Bei Direktmessung 100.
+        imGesamtverbrauchEnthalten:
+          type: boolean
+          description: >
+            `true` = Untermessung; der Verbrauch steckt bereits in der
+            Hauptmessung und wird im NENNER der Quote nicht zusätzlich
+            gezählt. `false` = eigene Messstelle (zählt in Zähler UND Nenner).
+
+            ABGELEITET aus `energy.messkanal.ist_untermessung` (V0058) — die
+            Topologie ist eine Eigenschaft der Messstelle, nicht der
+            Zuordnung. Beim Anlegen wird sie deshalb nicht entgegengenommen.
+        gueltigVon: { type: string, format: date }
+        gueltigBis: { type: [string, 'null'], format: date }
+        beendetGrund: { type: [string, 'null'] }
+        wirksam: { type: boolean, description: Abgeleitet aus `gueltigBis === null`. }
+
+    ZuordnungAnlegen:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, messkanalId, methode, gueltigVon]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        messkanalId: { type: string, format: uuid }
+        methode: { $ref: '#/components/schemas/Erkennungsmethode' }
+        genauigkeitPct:
+          type: number
+          minimum: 0.01
+          maximum: 100
+          description: Pflicht, sobald `methode` nicht `direktmessung` ist.
+        anteilProzent: { type: number, minimum: 0.01, maximum: 100, default: 100 }
+        # KEINE Angabe zur Untermessung: Sie steht seit V0058 am Messkanal
+        # (`MesskanalAnlegen.istUntermessung`) und wird von dort abgeleitet.
+        gueltigVon: { type: string, format: date }
+
+    ZuordnungBeenden:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, messkanalId, gueltigBis, grund]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        messkanalId: { type: string, format: uuid }
+        gueltigBis: { type: string, format: date }
+        grund:
+          type: string
+          minLength: 3
+          maxLength: 500
+          description: Pflicht — der Vorgang senkt die Nachweisquote und muss erklärt werden.
+
+    Entbehrlichkeit:
+      type: object
+      additionalProperties: false
+      required: [systemId, entbehrlich, grund]
+      properties:
+        systemId: { type: string, format: uuid }
+        entbehrlich: { type: boolean }
+        grund:
+          type: [string, 'null']
+          description: Pflicht-Begruendung, `null` solange nichts vermerkt ist.
+
+    EntbehrlichVermerken:
+      type: object
+      additionalProperties: false
+      required: [entbehrlich]
+      properties:
+        entbehrlich: { type: boolean }
+        grund:
+          type: string
+          minLength: 3
+          maxLength: 500
+          description: Pflicht, sobald `entbehrlich` gesetzt wird.
+
+    GruppenAnteil:
+      type: object
+      additionalProperties: false
+      required: [geraetegruppeId, bezeichnung, zugeordnetKwh, anteilPct]
+      properties:
+        geraetegruppeId: { type: string, format: uuid }
+        bezeichnung: { type: string }
+        zugeordnetKwh: { type: number }
+        anteilPct: { type: number }
+
+    ZuordnungsQuote:
+      type: object
+      additionalProperties: false
+      required: [foerderjahrCode, foerderjahrNummer, vonMonat, bisMonat, endkundeId, energietraeger, gesamtKwh, zugeordnetKwh, quotePct, sollQuotePct, erreicht, gruppen, systemeGesamt, systemeEntbehrlich, alleSystemeEntbehrlich, ohneTageswerte]
+      properties:
+        foerderjahrCode: { type: string }
+        foerderjahrNummer: { type: integer, description: Projektjahr — bestimmt die Sollquote. }
+        vonMonat: { type: string, format: date }
+        bisMonat: { type: string, format: date }
+        endkundeId: { type: string, format: uuid }
+        energietraeger: { type: string }
+        gesamtKwh: { type: number }
+        zugeordnetKwh: { type: number }
+        quotePct:
+          type: [number, 'null']
+          description: '`null`, wenn kein Verbrauch vorliegt — 0 % wäre dann eine Behauptung.'
+        sollQuotePct:
+          type: number
+          description: 20 / 25 / 30 / 35 / 40 nach Projektjahr. **Nicht kumulativ** ([Q3] Kap. 5).
+        erreicht: { type: [boolean, 'null'] }
+        gruppen:
+          type: array
+          items: { $ref: '#/components/schemas/GruppenAnteil' }
+          description: Aufteilung je Gruppe — die Angabe, die Kap. 6 für die Nutzerinformation verlangt.
+        systemeGesamt: { type: integer }
+        systemeEntbehrlich: { type: integer }
+        alleSystemeEntbehrlich:
+          type: boolean
+          description: >
+            `true`, wenn ALLE Systeme als entbehrlich vermerkt sind. Nimmt die
+            Würdigung niemandem ab — zeigt ihm nur die Tatsache.
+        ohneTageswerte:
+          type: boolean
+          description: >
+            `true`, wenn für den Zeitraum keine Tageswerte vorliegen. Meist,
+            weil die Verdichtung noch nicht gelaufen ist.
+
+    ProblemDetails:
+      type: object
+      description: RFC 9457.
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+  responses:
+    UngueltigeEingabe:
+      description: Ungültige Eingabe.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unauthorized:
+      description: Nicht authentifiziert.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Forbidden:
+      description: Nicht berechtigt.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    NichtGefunden:
+      description: Nicht gefunden.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Konflikt:
+      description: Konflikt mit dem aktuellen Zustand.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+    Unerwartet:
+      description: Unerwarteter Fehler.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }

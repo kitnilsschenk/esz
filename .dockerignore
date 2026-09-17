@@ -1,0 +1,38 @@
+# Was NICHT in den Build-Kontext gehoert (ADR-0011 C3).
+#
+# Zwei Gruende, und der zweite ist der wichtigere:
+#   1. Groesse/Geschwindigkeit — `node_modules` und `dist` werden im Image
+#      ohnehin neu erzeugt.
+#   2. GEHEIMNISSE. Eine `.env` im Build-Kontext landet in einer
+#      Image-Schicht, sobald irgendein `COPY` sie mitnimmt — und
+#      Image-Schichten sind unveraenderlich: Ein spaeteres `rm` entfernt die
+#      Datei aus dem Dateisystem, nicht aus der Historie.
+
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+*.tsbuildinfo
+
+# Geheimnisse und lokale Konfiguration
+.env
+.env.*
+!.env.example
+deployment/mosquitto/passwd
+
+# Nicht bau-relevant
+.git
+.github
+.claude
+docs
+compliance
+production
+tests
+workflows
+schemas
+migrations
+**/*.spec.ts
+**/*.spec.tsx
+**/*.integration.spec.ts

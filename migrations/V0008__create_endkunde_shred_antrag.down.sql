@@ -1,0 +1,46 @@
+-- V0008__create_endkunde_shred_antrag.down.sql
+--
+--
+-- Rollt die neue Tabelle `energy.endkunde_shred_antrag` (Vier-Augen-Antrag
+-- fuer Krypto-Shredding, ADR-0009) vollstaendig zurueck. Ausschliesslich von
+-- V0008 angelegte Objekte: die Tabelle selbst, ihr BEFORE-UPDATE-Trigger
+-- (trg_endkunde_shred_antrag_updated_at), ihre beiden CHECK-Constraints
+-- (ck_shred_antrag_vier_augen, ck_shred_antrag_status), ihr partieller
+-- Unique-Index (ux_endkunde_shred_antrag_offen_je_endkunde) und ihre beiden
+-- Spalten-Kommentare (beantragt_von_sub/freigeber_sub) -- ALLE werden durch
+-- ein einziges `DROP TABLE` automatisch mit entfernt (Trigger/Constraints/
+-- Indizes/Kommentare sind an die Tabelle gebunden, kein separates DROP je
+-- Objekt noetig, analog V0005-Down-Datei-Reasoning fuer eine einzelne
+-- Spalte). KEIN CASCADE noetig: keine andere Tabelle/View/Funktion
+-- referenziert energy.endkunde_shred_antrag (kein Fremdschluessel zeigt AUF
+-- diese Tabelle -- sie selbst referenziert NUR energy.endkunde, nicht
+-- umgekehrt).
+--
+-- `energy.set_updated_at()` (die von V0002 bereits vorhandene, in V0008 NUR
+-- wiederverwendete Trigger-Funktion) wird hier bewusst NICHT angeruehrt/
+-- gedroppt -- sie gehoert V0002 und wird weiterhin von mehreren anderen
+-- energy-Tabellen (energy.endkunde, energy.anschlussnutzer, energy.system,
+-- energy.zaehler, energy.messkanal, energy.geraetegruppe,
+-- energy.nutzungsverhaeltnis) verwendet. `energy.endkunde` selbst (FK-Ziel
+-- von endkunde_id) bleibt ebenfalls vollstaendig unangetastet.
+--
+-- Kein Backup-/Freigabe-Nachweis noetig
+-- (.claude/rules/database-migrations.md "Keine DROP TABLE auf produktive
+-- Tabellen ... ohne ... Nachweis"): diese Tabelle wird ERST durch die
+-- Up-Migration V0008 angelegt (Greenfield fuer dieses Feature, analog
+-- V0002/V0003/V0005-Down-Dateien) -- ein Rollback direkt nach dem `up`
+-- betrifft keine Produktivdaten.
+--
+-- ACHTUNG (nur relevant, falls dieser Rollback NICHT auf einer frischen
+-- Dev-/Test-Instanz erfolgt): wurde diese Migration bereits auf einer
+-- Instanz MIT echten (auch synthetischen Pilot-)Antragsdaten angewendet,
+-- ist vor diesem Rollback ein Backup zu ziehen und die User-Freigabe
+-- einzuholen (devops-lead-Abstimmung, analog V0002/V0003-Down-Dateien).
+--
+-- ROUNDTRIP-DETERMINISMUS: ein erneutes `up` nach diesem `down` legt die
+-- Tabelle identisch neu an (keine impliziten Sequence-/Default-Zustaende --
+-- `id` hat bewusst KEINEN DB-Default, s. Up-Datei); einzig `created_at`/
+-- `updated_at`/`beantragt_am` unterscheiden sich naturgemaess durch den
+-- neuen `now()`-Zeitpunkt, kein struktureller Unterschied.
+
+DROP TABLE energy.endkunde_shred_antrag;
