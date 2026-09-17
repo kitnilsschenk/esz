@@ -17,7 +17,7 @@
   "dependencies": {
     "@edms/shared": "workspace:*",
     "@fontsource/roboto": "5.1.1",
-    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-query": "^5.102.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.24.0",
